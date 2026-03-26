@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, Search, LogOut, User as UserIcon, Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { useProfile } from "@/hooks/use-profile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,21 +18,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Header() {
   const router = useRouter();
-  const [user, setUser] = useState<{ email?: string; name?: string } | null>(null);
+  const { profile, loading } = useProfile();
   const supabase = createClient();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser({
-          email: user.email,
-          name: user.user_metadata?.username ||  "未知",
-        });
-      }
-    };
-    fetchUser();
-  }, [supabase.auth]);
+  // 角色翻译映射
+  const roleMap: Record<string, { label: string; color: string }> = {
+    admin: { label: "超级管理员", color: "bg-red-500/10 text-red-600 border-red-200" },
+    edu_admin: { label: "教务管理员", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+    teacher: { label: "教师", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+    student: { label: "学生", color: "bg-zinc-500/10 text-zinc-600 border-zinc-200" },
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -62,17 +57,24 @@ export function Header() {
           
           <div className="flex items-center space-x-3 border-l pl-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium leading-none">{user?.name || "加载中..."}</p>
-              <p className="text-xs text-muted-foreground">{user?.email || "..."}</p>
+              <div className="flex items-center justify-end space-x-2">
+                {profile?.role && (
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${roleMap[profile.role]?.color || ""}`}>
+                    {roleMap[profile.role]?.label}
+                  </span>
+                )}
+                <p className="text-sm font-medium leading-none">{profile?.full_name || (loading ? "加载中..." : "未登录")}</p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{profile?.email || "..."}</p>
             </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-secondary">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src="" alt={user?.name} />
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {user?.name?.charAt(0).toUpperCase() || "U"}
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-secondary transition-transform hover:scale-105">
+                  <Avatar className="h-9 w-9 border border-zinc-200 dark:border-zinc-800">
+                    <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || ""} />
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                      {profile?.full_name?.charAt(0).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                 </Button>

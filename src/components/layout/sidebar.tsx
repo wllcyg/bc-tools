@@ -8,21 +8,39 @@ import {
   GraduationCap, 
   UserRound, 
   Settings,
-  BookOpen
+  BookOpen,
+  type LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const menuItems = [
+import { useProfile, type Role } from "@/hooks/use-profile";
+
+interface MenuItem {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  roles?: Role[];
+}
+
+const menuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: "仪表盘", href: "/" },
-  { icon: Users, label: "学生管理", href: "/students" },
-  { icon: GraduationCap, label: "班级管理", href: "/classes" },
-  { icon: UserRound, label: "教师管理", href: "/teachers" },
-  { icon: BookOpen, label: "课程管理", href: "/courses" },
-  { icon: Settings, label: "系统设置", href: "/settings" },
+  { icon: Users, label: "学生管理", href: "/students", roles: ["admin", "edu_admin", "teacher"] },
+  { icon: GraduationCap, label: "班级管理", href: "/classes", roles: ["admin", "edu_admin", "teacher"] },
+  { icon: UserRound, label: "教师管理", href: "/teachers", roles: ["admin", "edu_admin"] },
+  { icon: BookOpen, label: "课程管理", href: "/courses", roles: ["admin", "edu_admin", "teacher"] },
+  { icon: Settings, label: "系统设置", href: "/settings", roles: ["admin"] },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { profile } = useProfile();
+
+  // 根据角色过滤菜单项
+  const filteredItems = menuItems.filter(item => {
+    if (!item.roles) return true; // 所有角色可见
+    if (!profile) return false;
+    return item.roles.includes(profile.role);
+  });
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r bg-white transition-transform dark:bg-zinc-950">
@@ -37,7 +55,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 font-medium">
-          {menuItems.map((item) => {
+          {filteredItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
