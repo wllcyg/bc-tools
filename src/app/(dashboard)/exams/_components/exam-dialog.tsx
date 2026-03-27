@@ -49,7 +49,7 @@ const examSchema = z.object({
   exam_type: z.enum(["期中", "期末", "月考"]),
   semester: z.string().min(1, "学期不能为空"),
   exam_date: z.date().optional(),
-  course_ids: z.array(z.string()).optional().default([]),
+  course_ids: z.array(z.string()),
 });
 
 type ExamFormValues = z.infer<typeof examSchema>;
@@ -66,7 +66,7 @@ export function ExamDialog({ examObj, courses, trigger }: ExamDialogProps) {
 
   // 生成近三年的学期选项
   const currentYear = new Date().getFullYear();
-  const semesters = [];
+  const semesters: string[] = [];
   for (let i = -1; i <= 1; i++) {
     const year = currentYear + i;
     semesters.push(`${year}-${year + 1}-1`);
@@ -114,7 +114,7 @@ export function ExamDialog({ examObj, courses, trigger }: ExamDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button shadow="md">
+          <Button>
             <ClipboardList className="mr-2 h-4 w-4" />
             创建考试场次
           </Button>

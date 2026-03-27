@@ -38,11 +38,8 @@ import { toast } from "sonner";
 const courseSchema = z.object({
   name: z.string().min(1, "课程名称不能为空"),
   teacher_id: z.string().optional().nullable(),
-  max_score: z.coerce
-    .number()
-    .min(1, "满分不能为空")
-    .default(100),
-  class_ids: z.array(z.string()).optional().default([]),
+  max_score: z.number().min(1, "满分不能为空"),
+  class_ids: z.array(z.string()),
 });
 
 type CourseFormValues = z.infer<typeof courseSchema>;
@@ -67,7 +64,7 @@ export function CourseDialog({
     resolver: zodResolver(courseSchema),
     defaultValues: {
       name: courseObj?.name || "",
-      teacher_id: courseObj?.teacher_id || undefined,
+      teacher_id: courseObj?.teacher_id || "none",
       max_score: courseObj?.max_score ?? 100,
       class_ids: courseObj?.course_classes?.map((cc: any) => cc.class_id) || [],
     },

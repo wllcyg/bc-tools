@@ -176,9 +176,9 @@ export function StudentDialog({ student, classes, trigger }: StudentDialogProps)
                           mode="single"
                           locale={zhCN}
                           selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={(date: Date | undefined) => field.onChange(date?.toISOString())}
-                          disabled={(date: Date | undefined) =>
-                            date && (date > new Date() || date < new Date("1900-01-01"))
+                          onSelect={(date) => field.onChange(date?.toISOString())}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
                           }
                           initialFocus
                         />
