@@ -33,7 +33,8 @@ import {
   History,
   TrendingUp,
   Info,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 import { getStudentGrades } from "../actions";
@@ -458,6 +459,4 @@ function DetailItem({ label, value, className }: { label: string; value: string;
     );
 }
 
-function Loader2({ className }: { className?: string }) {
-    return <TrendingUp className={cn("animate-pulse", className)} />;
-}
+

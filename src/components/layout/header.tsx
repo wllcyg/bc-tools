@@ -40,12 +40,7 @@ export function Header() {
       <div className="ml-64 flex w-full items-center justify-between">
         {/* Search */}
         <div className="relative w-96 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input 
-            type="search" 
-            placeholder="搜索学生、老师或课程..." 
-            className="pl-10 focus-visible:ring-primary"
-          />
+
         </div>
 
         {/* Actions */}
@@ -54,7 +49,7 @@ export function Header() {
             <Bell className="h-5 w-5" />
             <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive" />
           </Button>
-          
+
           <div className="flex items-center space-x-3 border-l pl-4">
             <div className="text-right hidden sm:block">
               <div className="flex items-center justify-end space-x-2">
