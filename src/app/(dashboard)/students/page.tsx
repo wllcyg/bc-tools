@@ -20,15 +20,22 @@ import { DeleteButton } from "@/components/common/delete-button";
 import { deleteStudent } from "./actions";
 
 async function StudentsList({ 
-  classes, 
   classId, 
   keyword 
 }: { 
-  classes: { id: string, name: string, grade: string }[], 
   classId?: string, 
   keyword?: string 
 }) {
   const supabase = await createClient();
+
+  // 获取班级列表用于 Dialog
+  const { data: classes } = await supabase
+    .from("classes")
+    .select("id, name, grade")
+    .order("grade")
+    .order("name");
+
+  const classesData = classes || [];
 
   // 构建查询
   let query = supabase
@@ -41,12 +48,10 @@ async function StudentsList({
       )
     `);
 
-  // 应用班级筛选
   if (classId && classId !== "all") {
     query = query.eq("class_id", classId);
   }
 
-  // 应用关键词搜索
   if (keyword) {
     query = query.or(`name.ilike.%${keyword}%,student_no.ilike.%${keyword}%`);
   }
@@ -63,7 +68,7 @@ async function StudentsList({
         <GraduationCap className="h-10 w-10 mb-2 opacity-20" />
         <p>{keyword || classId ? "未找到符合条件的学生" : "暂无学生数据"}</p>
         {!keyword && !classId && (
-          <StudentDialog classes={classes} trigger={<Button variant="link">添加第一位学生</Button>} />
+          <StudentDialog classes={classesData} trigger={<Button variant="link">添加第一位学生</Button>} />
         )}
       </div>
     );
@@ -122,7 +127,7 @@ async function StudentsList({
                   <StudentDetailDrawer student={student} />
                   <StudentDialog
                     student={student}
-                    classes={classes}
+                    classes={classesData}
                     trigger={<Button variant="ghost" size="sm">编辑</Button>}
                   />
                   <DeleteButton
@@ -143,43 +148,77 @@ async function StudentsList({
   );
 }
 
-function ListSkeleton() {
-  return <Skeleton className="h-[400px] w-full rounded-xl" />;
-}
-
-export default async function StudentsPage(props: {
-  searchParams: Promise<{ class_id?: string, keyword?: string }>
-}) {
-  const searchParams = await props.searchParams;
-  const classId = searchParams.class_id;
-  const keyword = searchParams.keyword;
+async function StudentsHeader() {
   const supabase = await createClient();
-  
-  // 获取班级列表供 Dialog 和 Filter 使用
   const { data: classes } = await supabase
     .from("classes")
     .select("id, name, grade")
     .order("grade")
     .order("name");
 
-  return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">学生管理</h1>
-          <p className="text-muted-foreground mt-1">维护全校 student 档案、学籍状态及家长联系信息。</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ImportStudentsDialog classes={classes || []} />
-          <StudentDialog classes={classes || []} />
-        </div>
-      </div>
+  const classesData = classes || [];
 
-      <StudentFilters classes={classes || []} />
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight">学生管理</h1>
+        <p className="text-muted-foreground mt-1">维护全校学生档案、学籍状态及家长联系信息。</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <ImportStudentsDialog classes={classesData} />
+        <StudentDialog classes={classesData} />
+      </div>
+    </div>
+  );
+}
+
+async function StudentFiltersWrapper() {
+  const supabase = await createClient();
+  const { data: classes } = await supabase
+    .from("classes")
+    .select("id, name, grade")
+    .order("grade")
+    .order("name");
+
+  return <StudentFilters classes={classes || []} />;
+}
+
+function ListSkeleton() {
+  return <Skeleton className="h-[400px] w-full rounded-xl" />;
+}
+
+function HeaderSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  );
+}
+
+export default async function StudentsPage(props: {
+  searchParams: Promise<{ class_id?: string, keyword?: string }>
+}) {
+  const { class_id: classId, keyword } = await props.searchParams;
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <Suspense fallback={<HeaderSkeleton />}>
+        <StudentsHeader />
+      </Suspense>
+
+      <Suspense fallback={<Skeleton className="h-10 w-full max-w-sm" />}>
+        <StudentFiltersWrapper />
+      </Suspense>
 
       <Suspense key={`${classId}-${keyword}`} fallback={<ListSkeleton />}>
         <StudentsList 
-          classes={classes || []} 
           classId={classId} 
           keyword={keyword} 
         />

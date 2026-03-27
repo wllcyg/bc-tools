@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { BarChart, SearchX, Loader2 } from "lucide-react";
+import { BarChart, SearchX } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { GradeFilters } from "./_components/grade-filters";
 import { GradeEntryForm } from "./_components/grade-entry-form";
@@ -32,7 +32,7 @@ export default async function GradesPage(props: GradesPageProps) {
   ]);
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
