@@ -21,7 +21,7 @@ async function ClassesList({
   keyword, 
   grade 
 }: { 
-  teachers: any[], 
+  teachers: { id: string, name: string, subject: string | null }[], 
   keyword?: string, 
   grade?: string 
 }) {

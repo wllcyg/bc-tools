@@ -44,7 +44,13 @@ const teacherSchema = z.object({
 type TeacherFormValues = z.infer<typeof teacherSchema>;
 
 interface TeacherDialogProps {
-  teacher?: any;
+  teacher?: {
+    id: string;
+    name: string;
+    gender: "男" | "女";
+    subject: string;
+    phone?: string;
+  };
   trigger?: React.ReactNode;
 }
 
@@ -56,7 +62,7 @@ export function TeacherDialog({ teacher, trigger }: TeacherDialogProps) {
     resolver: zodResolver(teacherSchema),
     defaultValues: {
       name: teacher?.name || "",
-      gender: (teacher?.gender as any) || "男",
+      gender: teacher?.gender || "男",
       subject: teacher?.subject || "",
       phone: teacher?.phone || "",
     },

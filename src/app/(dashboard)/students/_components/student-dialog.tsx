@@ -5,8 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Loader2, Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns/format";
-import { zhCN } from "date-fns/locale/zh-CN";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import { cn } from "@/utils/cn";
 import {
   Dialog,
@@ -55,8 +55,8 @@ const studentSchema = z.object({
 type StudentFormValues = z.infer<typeof studentSchema>;
 
 interface StudentDialogProps {
-  student?: any;
-  classes: any[];
+  student?: Record<string, any>;
+  classes: { id: string, name: string, grade: string }[];
   trigger?: React.ReactNode;
 }
 

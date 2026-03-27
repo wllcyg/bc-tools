@@ -25,13 +25,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { bulkCreateStudents } from "../actions";
 
 interface ImportStudentsDialogProps {
-  classes: any[];
+  classes: { id: string, name: string, grade: string }[];
 }
 
 export function ImportStudentsDialog({ classes }: ImportStudentsDialogProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<Record<string, any>[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [successCount, setSuccessCount] = useState<number | null>(null);

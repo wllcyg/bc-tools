@@ -24,7 +24,7 @@ async function StudentsList({
   classId, 
   keyword 
 }: { 
-  classes: any[], 
+  classes: { id: string, name: string, grade: string }[], 
   classId?: string, 
   keyword?: string 
 }) {
