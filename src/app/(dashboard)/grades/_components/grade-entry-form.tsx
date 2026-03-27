@@ -19,9 +19,20 @@ import { saveGrades } from "../actions";
 import { cn } from "@/lib/utils";
 import { ImportGradesDialog } from "./import-grades-dialog";
 
+interface Student {
+  id: string;
+  name: string;
+  student_no: string;
+}
+
+interface Grade {
+  student_id: string;
+  score: number;
+}
+
 interface GradeEntryFormProps {
-  students: any[];
-  existingGrades: any[];
+  students: Student[];
+  existingGrades: Grade[];
   exam_id: string;
   course_id: string;
   maxScore: number;
@@ -152,9 +163,10 @@ export function GradeEntryForm({
 
       await saveGrades(gradesToSave);
       toast.success("成绩保存成功", { id: toastId });
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "保存失败";
       console.error(error);
-      toast.error(error.message || "保存失败", { id: toastId });
+      toast.error(message, { id: toastId });
     } finally {
       setLoading(false);
     }

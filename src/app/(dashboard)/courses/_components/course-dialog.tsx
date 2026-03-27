@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, SubmitHandler } from "react-hook-form";
 import * as z from "zod";
@@ -44,10 +44,34 @@ const courseSchema = z.object({
 
 type CourseFormValues = z.infer<typeof courseSchema>;
 
+interface CourseClass {
+  class_id: string;
+}
+
+interface Course {
+  id: string;
+  name: string;
+  teacher_id?: string | null;
+  max_score: number;
+  course_classes?: CourseClass[];
+}
+
+interface Teacher {
+  id: string;
+  name: string;
+  subject?: string | null;
+}
+
+interface Class {
+  id: string;
+  name: string;
+  grade: string;
+}
+
 interface CourseDialogProps {
-  courseObj?: any;
-  teachers: any[];
-  classes: any[];
+  courseObj?: Course;
+  teachers: Teacher[];
+  classes: Class[];
   trigger?: React.ReactNode;
 }
 
@@ -66,7 +90,7 @@ export function CourseDialog({
       name: courseObj?.name || "",
       teacher_id: courseObj?.teacher_id || "none",
       max_score: courseObj?.max_score ?? 100,
-      class_ids: courseObj?.course_classes?.map((cc: any) => cc.class_id) || [],
+      class_ids: courseObj?.course_classes?.map((cc: CourseClass) => cc.class_id) || [],
     },
   });
 
@@ -87,9 +111,10 @@ export function CourseDialog({
       }
       setOpen(false);
       form.reset();
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "操作失败";
       console.error(error);
-      toast.error(error.message || "操作失败", { id: toastId });
+      toast.error(message, { id: toastId });
     } finally {
       setLoading(false);
     }

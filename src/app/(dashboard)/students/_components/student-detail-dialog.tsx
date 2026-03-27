@@ -4,9 +4,6 @@ import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -29,16 +26,14 @@ import {
   User, 
   Phone, 
   GraduationCap, 
-  Calendar as CalendarIcon, 
   BarChart3, 
   History,
   TrendingUp,
   Info
 } from "lucide-react";
 import { format } from "date-fns";
-import { zhCN } from "date-fns/locale";
 import { getStudentGrades } from "../actions";
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/utils";
 import {
   LineChart,
   Line,
@@ -53,33 +48,78 @@ import {
   Legend,
 } from "recharts";
 
+interface StudentBlock {
+  id: string;
+  name: string;
+  student_no: string;
+  gender: string;
+  birth_date?: string;
+  status: string;
+  parent_name?: string;
+  parent_phone?: string;
+  created_at?: string;
+  classes?: {
+    grade: string;
+    name: string;
+  };
+}
+
+interface ExamGrade {
+  id: string;
+  score: number;
+  exams?: {
+    name: string;
+    exam_date: string;
+  } | null;
+  courses?: {
+    name: string;
+    max_score: number;
+  } | null;
+}
+
 interface StudentDetailDialogProps {
-  student: any;
+  student: StudentBlock;
   trigger?: React.ReactNode;
+}
+
+interface AccData {
+  [key: string]: {
+    name: string;
+    date: string;
+    totalScore: number;
+    totalMax: number;
+  };
+}
+
+interface SubjectAcc {
+  [key: string]: {
+    subject: string;
+    scores: number[];
+    maxScore: number;
+  };
 }
 
 export function StudentDetailDialog({ student, trigger }: StudentDetailDialogProps) {
   const [open, setOpen] = useState(false);
-  const [grades, setGrades] = useState<any[]>([]);
+  const [grades, setGrades] = useState<ExamGrade[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    async function loadGrades() {
+      setLoading(true);
+      try {
+        const data = await getStudentGrades(student.id);
+        setGrades(data);
+      } catch (error) {
+        console.error("Failed to load grades:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
     if (open && student?.id) {
       loadGrades();
     }
   }, [open, student?.id]);
-
-  async function loadGrades() {
-    setLoading(true);
-    try {
-      const data = await getStudentGrades(student.id);
-      setGrades(data);
-    } catch (error) {
-      console.error("Failed to load grades:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const statusMap: Record<string, { label: string; color: string }> = {
     active: { label: "在读", color: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400" },
@@ -91,12 +131,12 @@ export function StudentDetailDialog({ student, trigger }: StudentDetailDialogPro
 
   // 处理图表数据 - 趋势图
   const examTrendData = Object.values(
-    grades.reduce((acc: any, g: any) => {
+    grades.reduce((acc: AccData, g: ExamGrade) => {
       const examName = g.exams?.name || "未知考试";
       if (!acc[examName]) {
         acc[examName] = {
           name: examName,
-          date: g.exams?.exam_date,
+          date: g.exams?.exam_date || "",
           totalScore: 0,
           totalMax: 0,
         };
@@ -105,7 +145,7 @@ export function StudentDetailDialog({ student, trigger }: StudentDetailDialogPro
       acc[examName].totalMax += g.courses?.max_score || 100;
       return acc;
     }, {})
-  ).map((item: any) => ({
+  ).map((item) => ({
     name: item.name,
     date: item.date,
     percentage: parseFloat(((item.totalScore / item.totalMax) * 100).toFixed(1)),
@@ -113,7 +153,7 @@ export function StudentDetailDialog({ student, trigger }: StudentDetailDialogPro
 
   // 处理图表数据 - 科目表现
   const subjectPerformanceData = Object.values(
-    grades.reduce((acc: any, g: any) => {
+    grades.reduce((acc: SubjectAcc, g: ExamGrade) => {
       const subjectName = g.courses?.name || "未知科目";
       if (!acc[subjectName]) {
         acc[subjectName] = {
@@ -125,7 +165,7 @@ export function StudentDetailDialog({ student, trigger }: StudentDetailDialogPro
       acc[subjectName].scores.push(g.score || 0);
       return acc;
     }, {})
-  ).map((item: any) => ({
+  ).map((item) => ({
     subject: item.subject,
     avgPercentage: parseFloat(((item.scores.reduce((a: number, b: number) => a + b, 0) / item.scores.length / item.maxScore) * 100).toFixed(1)),
   }));
@@ -390,7 +430,8 @@ export function StudentDetailDialog({ student, trigger }: StudentDetailDialogPro
                             </TableRow>
                         ) : (
                             grades.map((g) => {
-                                const percentage = ((g.score / g.courses?.max_score) * 100).toFixed(1);
+                                const maxScore = g.courses?.max_score || 100;
+                                const percentage = ((g.score / maxScore) * 100).toFixed(1);
                                 return (
                                     <TableRow key={g.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
                                         <TableCell className="text-zinc-500 text-xs font-mono">

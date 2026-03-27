@@ -7,7 +7,7 @@ import * as z from "zod";
 import { Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -54,8 +54,20 @@ const studentSchema = z.object({
 
 type StudentFormValues = z.infer<typeof studentSchema>;
 
+interface Student {
+  id: string;
+  name: string;
+  student_no: string;
+  gender: "男" | "女";
+  birth_date: string;
+  class_id: string;
+  parent_name?: string | null;
+  parent_phone?: string | null;
+  status: "active" | "leave" | "suspended" | "graduated" | "dropped";
+}
+
 interface StudentDialogProps {
-  student?: Record<string, any>;
+  student?: Student;
   classes: { id: string, name: string, grade: string }[];
   trigger?: React.ReactNode;
 }
@@ -73,7 +85,7 @@ export function StudentDialog({ student, classes, trigger }: StudentDialogProps)
       class_id: student?.class_id || "",
       parent_name: student?.parent_name || "",
       parent_phone: student?.parent_phone || "",
-      status: student?.status || "active",
+      status: (student?.status as Student["status"]) || "active",
     },
   });
 
@@ -88,7 +100,11 @@ export function StudentDialog({ student, classes, trigger }: StudentDialogProps)
       setOpen(false);
       form.reset();
     } catch (error) {
-      console.error(error);
+      if (error instanceof Error) {
+        console.error("Student action failed:", error.message);
+      } else {
+        console.error("An unknown error occurred");
+      }
     } finally {
       setLoading(false);
     }

@@ -54,9 +54,23 @@ const examSchema = z.object({
 
 type ExamFormValues = z.infer<typeof examSchema>;
 
+interface Exam {
+  id: string;
+  name: string;
+  exam_type: "期中" | "期末" | "月考";
+  semester: string;
+  exam_date: string;
+  course_ids: string[];
+}
+
+interface Course {
+  id: string;
+  name: string;
+}
+
 interface ExamDialogProps {
-  examObj?: any;
-  courses: any[];
+  examObj?: Exam;
+  courses: Course[];
   trigger?: React.ReactNode;
 }
 
@@ -94,17 +108,18 @@ export function ExamDialog({ examObj, courses, trigger }: ExamDialogProps) {
       };
 
       if (examObj) {
-        await updateExam(examObj.id, formattedValues as any);
+        await updateExam(examObj.id, formattedValues);
         toast.success("更新成功", { id: toastId });
       } else {
-        await createExam(formattedValues as any);
+        await createExam(formattedValues);
         toast.success("创建成功", { id: toastId });
       }
       setOpen(false);
       if (!examObj) form.reset();
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "操作失败";
       console.error(error);
-      toast.error(error.message || "操作失败", { id: toastId });
+      toast.error(message, { id: toastId });
     } finally {
       setLoading(false);
     }

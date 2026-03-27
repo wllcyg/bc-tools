@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
   SheetDescription,
   SheetTrigger,
@@ -33,12 +32,11 @@ import {
   History,
   TrendingUp,
   Info,
-  Calendar as CalendarIcon,
   Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 import { getStudentGrades } from "../actions";
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/utils";
 import {
   LineChart,
   Line,
@@ -53,33 +51,77 @@ import {
   Legend,
 } from "recharts";
 
+interface Grade {
+  id: string;
+  score: number;
+  exams?: {
+    name: string;
+    exam_date: string;
+  } | null;
+  courses?: {
+    name: string;
+    max_score: number;
+  } | null;
+}
+
+interface Student {
+  id: string;
+  name: string;
+  student_no: string;
+  status: string;
+  gender: string;
+  birth_date?: string;
+  created_at?: string;
+  parent_name?: string;
+  parent_phone?: string;
+  class_id?: string;
+  classes?: {
+    grade: string;
+    name: string;
+  } | null;
+}
+
 interface StudentDetailDrawerProps {
-  student: any;
+  student: Student;
   trigger?: React.ReactNode;
+}
+
+interface ExamTrendItem {
+  name: string;
+  date: string | undefined;
+  totalScore: number;
+  totalMax: number;
+}
+
+interface SubjectPerformanceItem {
+  subject: string;
+  scores: number[];
+  maxScore: number;
 }
 
 export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerProps) {
   const [open, setOpen] = useState(false);
-  const [grades, setGrades] = useState<any[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    async function loadGrades() {
+      if (!student?.id) return;
+      setLoading(true);
+      try {
+        const data = await getStudentGrades(student.id);
+        setGrades(data);
+      } catch (error) {
+        console.error("Failed to load grades:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     if (open && student?.id) {
       loadGrades();
     }
   }, [open, student?.id]);
-
-  async function loadGrades() {
-    setLoading(true);
-    try {
-      const data = await getStudentGrades(student.id);
-      setGrades(data);
-    } catch (error) {
-      console.error("Failed to load grades:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const statusMap: Record<string, { label: string; color: string }> = {
     active: { label: "在读", color: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400" },
@@ -91,7 +133,7 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
 
   // 处理图表数据 - 趋势图
   const examTrendData = Object.values(
-    grades.reduce((acc: any, g: any) => {
+    grades.reduce((acc: Record<string, ExamTrendItem>, g: Grade) => {
       const examName = g.exams?.name || "未知考试";
       if (!acc[examName]) {
         acc[examName] = {
@@ -105,27 +147,30 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
       acc[examName].totalMax += g.courses?.max_score || 100;
       return acc;
     }, {})
-  ).map((item: any) => ({
+  ).map((item: ExamTrendItem) => ({
     name: item.name,
     date: item.date,
     percentage: parseFloat(((item.totalScore / item.totalMax) * 100).toFixed(1)),
-  })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  })).sort((a, b) => {
+    if (!a.date || !b.date) return 0;
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  });
 
   // 处理图表数据 - 科目表现
   const subjectPerformanceData = Object.values(
-    grades.reduce((acc: any, g: any) => {
+    grades.reduce((acc: Record<string, SubjectPerformanceItem>, g: Grade) => {
       const subjectName = g.courses?.name || "未知科目";
       if (!acc[subjectName]) {
         acc[subjectName] = {
           subject: subjectName,
-          scores: [],
+          scores: [] as number[],
           maxScore: g.courses?.max_score || 100,
         };
       }
       acc[subjectName].scores.push(g.score || 0);
       return acc;
     }, {})
-  ).map((item: any) => ({
+  ).map((item: SubjectPerformanceItem) => ({
     subject: item.subject,
     avgPercentage: parseFloat(((item.scores.reduce((a: number, b: number) => a + b, 0) / item.scores.length / item.maxScore) * 100).toFixed(1)),
   }));
@@ -396,8 +441,9 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            grades.map((g) => {
-                                const percentage = ((g.score / g.courses?.max_score) * 100).toFixed(1);
+                            grades.map((g: Grade) => {
+                                const maxScore = g.courses?.max_score || 100;
+                                const percentage = ((g.score / maxScore) * 100).toFixed(1);
                                 return (
                                     <TableRow key={g.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors border-zinc-100 dark:border-zinc-900">
                                         <TableCell className="text-zinc-500 font-mono text-xs">
