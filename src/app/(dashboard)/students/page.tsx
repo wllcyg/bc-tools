@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StudentDialog } from "./_components/student-dialog";
+import { ImportStudentsDialog } from "./_components/import-students-dialog";
 import { DeleteButton } from "@/components/common/delete-button";
 import { deleteStudent } from "./actions";
 
@@ -48,8 +49,10 @@ async function StudentsList({ classes }: { classes: any[] }) {
 
   const statusMap: Record<string, { label: string; color: string }> = {
     active: { label: "在读", color: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400" },
+    leave: { label: "请假", color: "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400" },
     suspended: { label: "休学", color: "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400" },
     graduated: { label: "毕业", color: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400" },
+    dropped: { label: "退学", color: "bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/20 dark:text-rose-400" },
   };
 
   return (
@@ -138,7 +141,10 @@ export default async function StudentsPage() {
           <h1 className="text-3xl font-extrabold tracking-tight">学生管理</h1>
           <p className="text-muted-foreground mt-1">维护全校学生档案、学籍状态及家长联系信息。</p>
         </div>
-        <StudentDialog classes={classes || []} />
+        <div className="flex items-center gap-2">
+          <ImportStudentsDialog classes={classes || []} />
+          <StudentDialog classes={classes || []} />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

@@ -5,8 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Loader2, Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { zhCN } from "date-fns/locale";
+import { format } from "date-fns/format";
+import { zhCN } from "date-fns/locale/zh-CN";
 import { cn } from "@/utils/cn";
 import {
   Dialog,
@@ -49,7 +49,7 @@ const studentSchema = z.object({
   class_id: z.string().min(1, "请选择所在班级"),
   parent_name: z.string().optional(),
   parent_phone: z.string().optional(),
-  status: z.enum(["active", "suspended", "graduated"]),
+  status: z.enum(["active", "leave", "suspended", "graduated", "dropped"]),
 });
 
 type StudentFormValues = z.infer<typeof studentSchema>;
@@ -174,10 +174,11 @@ export function StudentDialog({ student, classes, trigger }: StudentDialogProps)
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
+                          locale={zhCN}
                           selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={(date) => field.onChange(date?.toISOString())}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
+                          onSelect={(date: Date | undefined) => field.onChange(date?.toISOString())}
+                          disabled={(date: Date | undefined) =>
+                            date && (date > new Date() || date < new Date("1900-01-01"))
                           }
                           initialFocus
                         />
@@ -254,9 +255,11 @@ export function StudentDialog({ student, classes, trigger }: StudentDialogProps)
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="active">在读</SelectItem>
+                        <SelectItem value="active">在读/在校</SelectItem>
+                        <SelectItem value="leave">请假</SelectItem>
                         <SelectItem value="suspended">休学</SelectItem>
                         <SelectItem value="graduated">毕业</SelectItem>
+                        <SelectItem value="dropped">退学</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

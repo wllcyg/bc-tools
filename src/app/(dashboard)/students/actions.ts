@@ -82,3 +82,41 @@ export async function deleteStudent(id: string) {
 
   revalidatePath("/students");
 }
+
+export async function bulkCreateStudents(students: any[]) {
+  const supabase = await createClient();
+  const year = new Date().getFullYear();
+  const prefix = `S${year}`;
+
+  // 1. 获取当前年份最高学号
+  const { data: lastStudent } = await supabase
+    .from("students")
+    .select("student_no")
+    .like("student_no", `${prefix}%`)
+    .order("student_no", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let nextSeq = 1;
+  if (lastStudent) {
+    const lastSeq = parseInt(lastStudent.student_no.replace(prefix, ""));
+    nextSeq = lastSeq + 1;
+  }
+
+  // 2. 批量生成学号并准备插入数据
+  const studentsToInsert = students.map((s, index) => ({
+    ...s,
+    student_no: `${prefix}${(nextSeq + index).toString().padStart(4, "0")}`,
+  }));
+
+  // 3. 批量插入
+  const { data, error } = await supabase
+    .from("students")
+    .insert(studentsToInsert)
+    .select();
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/students");
+  return data;
+}
