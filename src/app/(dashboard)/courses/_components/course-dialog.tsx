@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import * as z from "zod";
 import { Loader2, BookOpen } from "lucide-react";
 import {
@@ -33,12 +33,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createCourse, updateCourse } from "../actions";
+import { toast } from "sonner";
 
 const courseSchema = z.object({
   name: z.string().min(1, "课程名称不能为空"),
   teacher_id: z.string().optional().nullable(),
-  max_score: z
-    .number({ invalid_type_error: "请输入有效数字" })
+  max_score: z.coerce
+    .number()
     .min(1, "满分不能为空")
     .default(100),
   class_ids: z.array(z.string()).optional().default([]),
@@ -66,14 +67,15 @@ export function CourseDialog({
     resolver: zodResolver(courseSchema),
     defaultValues: {
       name: courseObj?.name || "",
-      teacher_id: courseObj?.teacher_id || null,
+      teacher_id: courseObj?.teacher_id || undefined,
       max_score: courseObj?.max_score ?? 100,
       class_ids: courseObj?.course_classes?.map((cc: any) => cc.class_id) || [],
     },
   });
 
-  async function onSubmit(values: CourseFormValues) {
+  const onSubmit: SubmitHandler<CourseFormValues> = async (values) => {
     setLoading(true);
+    const toastId = toast.loading("处理中...");
     try {
       const processed = {
         ...values,
@@ -81,18 +83,20 @@ export function CourseDialog({
       };
       if (courseObj) {
         await updateCourse(courseObj.id, processed);
+        toast.success("更新成功", { id: toastId });
       } else {
         await createCourse(processed);
+        toast.success("创建成功", { id: toastId });
       }
       setOpen(false);
       form.reset();
     } catch (error: any) {
       console.error(error);
-      alert(error.message || "操作失败");
+      toast.error(error.message || "操作失败", { id: toastId });
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -110,20 +114,21 @@ export function CourseDialog({
             <DialogHeader>
               <DialogTitle>{courseObj ? "编辑课程" : "创建新课程"}</DialogTitle>
               <DialogDescription>
-                填写课程信息并选择开课班级。
+                设置课程名称、满分及关联的任课教师和班级。
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-2">
-              {/* 课程名称 */}
+
+              {/* 课程名称 (自动填充，也可手动微调) */}
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>课程名称</FormLabel>
+                    <FormLabel>显示名称</FormLabel>
                     <FormControl>
-                      <Input placeholder="如：语文、数学、英语" {...field} />
+                      <Input placeholder="如：语文" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -171,7 +176,7 @@ export function CourseDialog({
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="默认 100"
+                        placeholder="默认继承科目满分"
                         {...field}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />

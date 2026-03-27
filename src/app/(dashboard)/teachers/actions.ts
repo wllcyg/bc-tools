@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 
 export async function createTeacher(formData: {
   name: string;
-  subject: string;
+  subject?: string;
   phone?: string;
   gender?: string;
 }) {

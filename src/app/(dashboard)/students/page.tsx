@@ -1,8 +1,7 @@
 import { Suspense } from "react";
-import { Search, Filter, MoreVertical, User, GraduationCap } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,15 +13,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StudentDialog } from "./_components/student-dialog";
+import { StudentDetailDrawer } from "./_components/student-detail-drawer";
 import { ImportStudentsDialog } from "./_components/import-students-dialog";
+import { StudentFilters } from "./_components/student-filters";
 import { DeleteButton } from "@/components/common/delete-button";
 import { deleteStudent } from "./actions";
 
-async function StudentsList({ classes }: { classes: any[] }) {
+async function StudentsList({ 
+  classes, 
+  classId, 
+  keyword 
+}: { 
+  classes: any[], 
+  classId?: string, 
+  keyword?: string 
+}) {
   const supabase = await createClient();
 
-  // 级联查询班级信息
-  const { data: students, error } = await supabase
+  // 构建查询
+  let query = supabase
     .from("students")
     .select(`
       *,
@@ -30,8 +39,19 @@ async function StudentsList({ classes }: { classes: any[] }) {
         name,
         grade
       )
-    `)
-    .order("created_at", { ascending: false });
+    `);
+
+  // 应用班级筛选
+  if (classId && classId !== "all") {
+    query = query.eq("class_id", classId);
+  }
+
+  // 应用关键词搜索
+  if (keyword) {
+    query = query.or(`name.ilike.%${keyword}%,student_no.ilike.%${keyword}%`);
+  }
+
+  const { data: students, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
     return <div className="text-destructive font-medium p-4">加载失败: {error.message}</div>;
@@ -41,8 +61,10 @@ async function StudentsList({ classes }: { classes: any[] }) {
     return (
       <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed text-muted-foreground bg-white/50 backdrop-blur-sm dark:bg-zinc-950/50">
         <GraduationCap className="h-10 w-10 mb-2 opacity-20" />
-        <p>暂无学生数据</p>
-        <StudentDialog classes={classes} trigger={<Button variant="link">添加第一位学生</Button>} />
+        <p>{keyword || classId ? "未找到符合条件的学生" : "暂无学生数据"}</p>
+        {!keyword && !classId && (
+          <StudentDialog classes={classes} trigger={<Button variant="link">添加第一位学生</Button>} />
+        )}
       </div>
     );
   }
@@ -97,6 +119,7 @@ async function StudentsList({ classes }: { classes: any[] }) {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
+                  <StudentDetailDrawer student={student} />
                   <StudentDialog
                     student={student}
                     classes={classes}
@@ -124,10 +147,15 @@ function ListSkeleton() {
   return <Skeleton className="h-[400px] w-full rounded-xl" />;
 }
 
-export default async function StudentsPage() {
+export default async function StudentsPage(props: {
+  searchParams: Promise<{ class_id?: string, keyword?: string }>
+}) {
+  const searchParams = await props.searchParams;
+  const classId = searchParams.class_id;
+  const keyword = searchParams.keyword;
   const supabase = await createClient();
   
-  // 获取班级列表供 Dialog 使用
+  // 获取班级列表供 Dialog 和 Filter 使用
   const { data: classes } = await supabase
     .from("classes")
     .select("id, name, grade")
@@ -139,7 +167,7 @@ export default async function StudentsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">学生管理</h1>
-          <p className="text-muted-foreground mt-1">维护全校学生档案、学籍状态及家长联系信息。</p>
+          <p className="text-muted-foreground mt-1">维护全校 student 档案、学籍状态及家长联系信息。</p>
         </div>
         <div className="flex items-center gap-2">
           <ImportStudentsDialog classes={classes || []} />
@@ -147,19 +175,14 @@ export default async function StudentsPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="输入学生姓名或学号..." className="pl-10 h-10 border-zinc-200 focus:bg-white transition-all dark:border-zinc-800 shadow-sm" />
-        </div>
-        <Button variant="outline" className="h-10 border-zinc-200 dark:border-zinc-800 shadow-sm transition-all hover:bg-zinc-50">
-          <Filter className="mr-2 h-4 w-4" />
-          多条件筛选
-        </Button>
-      </div>
+      <StudentFilters classes={classes || []} />
 
-      <Suspense fallback={<ListSkeleton />}>
-        <StudentsList classes={classes || []} />
+      <Suspense key={`${classId}-${keyword}`} fallback={<ListSkeleton />}>
+        <StudentsList 
+          classes={classes || []} 
+          classId={classId} 
+          keyword={keyword} 
+        />
       </Suspense>
     </div>
   );

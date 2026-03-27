@@ -1,8 +1,8 @@
 import { Suspense } from "react";
-import { Search, Filter } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -11,24 +11,41 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ClassDialog } from "./_components/class-dialog";
+import { ClassFilters } from "./_components/class-filters";
 import { DeleteButton } from "@/components/common/delete-button";
 import { deleteClass } from "./actions";
 
-async function ClassesList({ teachers }: { teachers: any[] }) {
+async function ClassesList({ 
+  teachers, 
+  keyword, 
+  grade 
+}: { 
+  teachers: any[], 
+  keyword?: string, 
+  grade?: string 
+}) {
   const supabase = await createClient();
   
-  // 级联查询班主任信息
-  const { data: classes, error } = await supabase
+  // 构建查询
+  let query = supabase
     .from("classes")
     .select(`
       *,
       teachers (
         name
       )
-    `)
+    `);
+
+  if (keyword) {
+    query = query.ilike("name", `%${keyword}%`);
+  }
+
+  if (grade && grade !== "all") {
+    query = query.eq("grade", grade);
+  }
+
+  const { data: classes, error } = await query
     .order("grade", { ascending: true })
     .order("name", { ascending: true });
 
@@ -39,8 +56,10 @@ async function ClassesList({ teachers }: { teachers: any[] }) {
   if (!classes || classes.length === 0) {
     return (
       <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed text-muted-foreground">
-        <p>暂无班级信息</p>
-        <ClassDialog teachers={teachers} trigger={<Button variant="link" className="mt-2">立即添加第一个班级</Button>} />
+        <p>{keyword || grade ? "未找到符合条件的班级" : "暂无班级信息"}</p>
+        {!keyword && !grade && (
+          <ClassDialog teachers={teachers} trigger={<Button variant="link" className="mt-2">立即添加第一个班级</Button>} />
+        )}
       </div>
     );
   }
@@ -96,10 +115,13 @@ async function ClassesList({ teachers }: { teachers: any[] }) {
 }
 
 function ClassesSkeleton() {
-  return <div className="rounded-xl border h-64 animate-pulse bg-muted/20" />;
+  return <Skeleton className="h-64 w-full rounded-xl" />;
 }
 
-export default async function ClassesPage() {
+export default async function ClassesPage(props: {
+  searchParams: Promise<{ keyword?: string, grade?: string }>
+}) {
+  const { keyword, grade } = await props.searchParams;
   const supabase = await createClient();
   const { data: teachers } = await supabase
     .from("teachers")
@@ -108,7 +130,6 @@ export default async function ClassesPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      {/* Header Section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">班级管理</h1>
@@ -117,21 +138,10 @@ export default async function ClassesPage() {
         <ClassDialog teachers={teachers || []} />
       </div>
 
-      {/* Filters Section */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="输入班级名称搜索..." className="pl-10 h-10 border-zinc-200 focus:bg-white transition-all dark:border-zinc-800" />
-        </div>
-        <Button variant="outline" className="h-10 border-zinc-200 dark:border-zinc-800">
-          <Filter className="mr-2 h-4 w-4" />
-          年级筛选
-        </Button>
-      </div>
+      <ClassFilters />
 
-      {/* List Section */}
-      <Suspense fallback={<ClassesSkeleton />}>
-        <ClassesList teachers={teachers || []} />
+      <Suspense key={`${keyword}-${grade}`} fallback={<ClassesSkeleton />}>
+        <ClassesList teachers={teachers || []} keyword={keyword} grade={grade} />
       </Suspense>
     </div>
   );

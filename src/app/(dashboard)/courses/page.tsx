@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import { Search, BookOpen, Users } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -13,19 +13,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CourseDialog } from "./_components/course-dialog";
+import { CourseFilters } from "./_components/course-filters";
 import { DeleteButton } from "@/components/common/delete-button";
 import { deleteCourse } from "./actions";
 
 async function CoursesList({
   teachers,
   classes,
+  keyword,
 }: {
   teachers: any[];
   classes: any[];
+  keyword?: string;
 }) {
   const supabase = await createClient();
 
-  const { data: courses, error } = await supabase
+  let query = supabase
     .from("courses")
     .select(`
       *,
@@ -40,8 +43,13 @@ async function CoursesList({
           grade
         )
       )
-    `)
-    .order("name", { ascending: true });
+    `);
+
+  if (keyword) {
+    query = query.or(`name.ilike.%${keyword}%,code.ilike.%${keyword}%`);
+  }
+
+  const { data: courses, error } = await query.order("name", { ascending: true });
 
   if (error) {
     return (
@@ -55,16 +63,18 @@ async function CoursesList({
     return (
       <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed text-muted-foreground">
         <BookOpen className="h-10 w-10 mb-3 opacity-30" />
-        <p>暂无课程信息</p>
-        <CourseDialog
-          teachers={teachers}
-          classes={classes}
-          trigger={
-            <Button variant="link" className="mt-2">
-              立即添加第一门课程
-            </Button>
-          }
-        />
+        <p>{keyword ? "未找到符合条件的课程" : "暂无课程信息"}</p>
+        {!keyword && (
+          <CourseDialog
+            teachers={teachers}
+            classes={classes}
+            trigger={
+              <Button variant="link" className="mt-2">
+                立即添加第一门课程
+              </Button>
+            }
+          />
+        )}
       </div>
     );
   }
@@ -173,10 +183,13 @@ async function CoursesList({
 }
 
 function CoursesSkeleton() {
-  return <div className="rounded-xl border h-64 animate-pulse bg-muted/20" />;
+  return <Skeleton className="h-64 w-full rounded-xl" />;
 }
 
-export default async function CoursesPage() {
+export default async function CoursesPage(props: {
+  searchParams: Promise<{ keyword?: string }>
+}) {
+  const { keyword } = await props.searchParams;
   const supabase = await createClient();
 
   const [{ data: teachers }, { data: classes }] = await Promise.all([
@@ -200,23 +213,21 @@ export default async function CoursesPage() {
             管理全校课程信息及各班级的开课设置。
           </p>
         </div>
-        <CourseDialog teachers={teachers || []} classes={classes || []} />
+        <CourseDialog 
+          teachers={teachers || []} 
+          classes={classes || []} 
+        />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="输入课程名称或编码搜索..."
-            className="pl-10 h-10 border-zinc-200 focus:bg-white transition-all dark:border-zinc-800"
-          />
-        </div>
-      </div>
+      <CourseFilters />
 
       {/* List */}
-      <Suspense fallback={<CoursesSkeleton />}>
-        <CoursesList teachers={teachers || []} classes={classes || []} />
+      <Suspense key={keyword} fallback={<CoursesSkeleton />}>
+        <CoursesList 
+          teachers={teachers || []} 
+          classes={classes || []} 
+          keyword={keyword}
+        />
       </Suspense>
     </div>
   );

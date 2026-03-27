@@ -120,3 +120,32 @@ export async function bulkCreateStudents(students: any[]) {
   revalidatePath("/students");
   return data;
 }
+
+export async function getStudentGrades(studentId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("grades")
+    .select(`
+      *,
+      exams (
+        name,
+        exam_date
+      ),
+      courses (
+        name,
+        max_score
+      )
+    `)
+    .eq("student_id", studentId);
+
+  if (error) throw new Error(error.message);
+  
+  // 按考试日期和课程名称排序
+  return (data || []).sort((a: any, b: any) => {
+    const dateA = new Date(a.exams?.exam_date || 0).getTime();
+    const dateB = new Date(b.exams?.exam_date || 0).getTime();
+    if (dateA !== dateB) return dateB - dateA;
+    return (a.courses?.name || "").localeCompare(b.courses?.name || "");
+  });
+}

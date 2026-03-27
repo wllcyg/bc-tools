@@ -4,7 +4,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -32,11 +32,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createTeacher, updateTeacher } from "../actions";
+import { toast } from "sonner";
 
 const teacherSchema = z.object({
   name: z.string().min(2, "姓名至少 2 个字符"),
   gender: z.enum(["男", "女"]),
-  subject: z.string().min(1, "请选择或输入教授科目"),
+  subject: z.string().min(1, "请输入教授科目"),
   phone: z.string().optional(),
 });
 
@@ -63,16 +64,20 @@ export function TeacherDialog({ teacher, trigger }: TeacherDialogProps) {
 
   async function onSubmit(values: TeacherFormValues) {
     setLoading(true);
+    const toastId = toast.loading("处理中...");
     try {
       if (teacher) {
         await updateTeacher(teacher.id, values);
+        toast.success("更新成功", { id: toastId });
       } else {
         await createTeacher(values);
+        toast.success("添加成功", { id: toastId });
       }
       setOpen(false);
       form.reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      toast.error(error.message || "操作失败", { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -81,7 +86,12 @@ export function TeacherDialog({ teacher, trigger }: TeacherDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button>添加教师</Button>}
+        {trigger || (
+          <Button>
+            <UserPlus className="mr-2 h-4 w-4" />
+            添加教师
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <Form {...form}>

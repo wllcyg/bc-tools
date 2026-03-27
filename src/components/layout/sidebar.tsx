@@ -9,6 +9,9 @@ import {
   UserRound, 
   Settings,
   BookOpen,
+  BookMarked,
+  FileText,
+  BarChart,
   type LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,7 +30,9 @@ const menuItems: MenuItem[] = [
   { icon: Users, label: "学生管理", href: "/students", roles: ["admin", "edu_admin", "teacher"] },
   { icon: GraduationCap, label: "班级管理", href: "/classes", roles: ["admin", "edu_admin", "teacher"] },
   { icon: UserRound, label: "教师管理", href: "/teachers", roles: ["admin", "edu_admin"] },
-  { icon: BookOpen, label: "课程管理", href: "/courses", roles: ["admin", "edu_admin", "teacher"] },
+  { icon: BookMarked, label: "课程管理", href: "/courses", roles: ["admin", "edu_admin"] },
+  { icon: FileText, label: "考试管理", href: "/exams", roles: ["admin", "edu_admin"] },
+  { icon: BarChart, label: "成绩管理", href: "/grades", roles: ["admin", "edu_admin", "teacher"] },
   { icon: Settings, label: "系统设置", href: "/settings", roles: ["admin"] },
 ];
 
