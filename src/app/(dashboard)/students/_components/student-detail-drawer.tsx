@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Sheet,
   SheetContent,
@@ -32,10 +32,12 @@ import {
   History,
   TrendingUp,
   Info,
-  Loader2
+  Loader2,
+  Calendar,
+  X
 } from "lucide-react";
 import { format } from "date-fns";
-import { getStudentGrades } from "../actions";
+import { getStudentGrades, getStudentGrowthData } from "../actions";
 import { cn } from "@/lib/utils";
 import {
   LineChart,
@@ -50,11 +52,17 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import html2canvas from "html2canvas";
+import { pdf } from "@react-pdf/renderer";
+import { GradeReportPDF } from "./report-pdf";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Grade {
   id: string;
   score: number;
   exams?: {
+    id: string;
     name: string;
     exam_date: string;
   } | null;
@@ -100,38 +108,102 @@ interface SubjectPerformanceItem {
 }
 
 export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerProps) {
-  const [open, setOpen] = useState(false);
   const [grades, setGrades] = useState<Grade[]>([]);
+  const [classAverages, setClassAverages] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  const handleExportPDF = async () => {
+    if (!student) return;
+
+    // 如果当前不在看板标签页，chartRef.current 为空（或者 html2canvas 无法捕获隐藏元素）
+    if (!chartRef.current || activeTab !== "analytics") {
+        setActiveTab("analytics");
+        toast.loading("正在准备看板数据，请在数据加载后再次点击导出...", { duration: 2000 });
+        return;
+    }
+    
+    setExporting(true);
+    const toastId = toast.loading("正在捕获图表并生成报告...");
+    
+    try {
+      // 捕获图表
+      const canvas = await html2canvas(chartRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+        useCORS: true
+      });
+      const chartImage = canvas.toDataURL("image/png");
+
+      // 生成 PDF
+      const blob = await pdf(
+        <GradeReportPDF student={student} grades={grades} chartImage={chartImage} />
+      ).toBlob();
+      
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${student.name}_学业成长报告_${format(new Date(), "yyyyMMdd")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("报告生成成功！", { id: toastId });
+    } catch (error) {
+      console.error("PDF Export error:", error);
+      toast.error("生成报告失败，请重试", { id: toastId });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadGrades() {
-      if (!student?.id) return;
-      setLoading(true);
-      try {
+    async function loadGrowthData() {
+      if (!student?.id || !student?.class_id) {
         const data = await getStudentGrades(student.id);
         setGrades(data);
+        return;
+      }
+      setLoading(true);
+      try {
+        const result = await getStudentGrowthData(student.id, student.class_id);
+        if (result) {
+          setGrades(result.studentGrades);
+          setClassAverages(result.classAverages);
+        } else {
+          setGrades([]);
+          setClassAverages({});
+        }
       } catch (error) {
-        console.error("Failed to load grades:", error);
+        console.error("Failed to load growth data:", error);
       } finally {
         setLoading(false);
       }
     }
 
     if (open && student?.id) {
-      loadGrades();
+      loadGrowthData();
     }
   }, [open, student?.id]);
 
   const statusMap: Record<string, { label: string; color: string }> = {
     active: { label: "在读", color: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400" },
+    "在校": { label: "在读", color: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400" },
     leave: { label: "请假", color: "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400" },
+    "请假": { label: "请假", color: "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-950/20 dark:text-blue-400" },
     suspended: { label: "休学", color: "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400" },
+    "休学": { label: "休学", color: "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400" },
     graduated: { label: "毕业", color: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400" },
+    "毕业": { label: "毕业", color: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400" },
     dropped: { label: "退学", color: "bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/20 dark:text-rose-400" },
+    "退学": { label: "退学", color: "bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/20 dark:text-rose-400" },
   };
 
-  // 处理图表数据 - 趋势图
   const examTrendData = Object.values(
     grades.reduce((acc: Record<string, ExamTrendItem>, g: Grade) => {
       const examName = g.exams?.name || "未知考试";
@@ -147,16 +219,19 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
       acc[examName].totalMax += g.courses?.max_score || 100;
       return acc;
     }, {})
-  ).map((item: ExamTrendItem) => ({
-    name: item.name,
-    date: item.date,
-    percentage: parseFloat(((item.totalScore / item.totalMax) * 100).toFixed(1)),
-  })).sort((a, b) => {
+  ).map((item: ExamTrendItem) => {
+    const examId = grades.find(g => g.exams?.name === item.name)?.exams?.id || "";
+    return {
+      name: item.name,
+      date: item.date,
+      percentage: parseFloat(((item.totalScore / item.totalMax) * 100).toFixed(1)),
+      classAverage: classAverages[examId] || 0,
+    };
+  }).sort((a, b) => {
     if (!a.date || !b.date) return 0;
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   });
 
-  // 处理图表数据 - 科目表现
   const subjectPerformanceData = Object.values(
     grades.reduce((acc: Record<string, SubjectPerformanceItem>, g: Grade) => {
       const subjectName = g.courses?.name || "未知科目";
@@ -183,70 +258,71 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
         {trigger || <Button variant="outline" size="sm">详情</Button>}
       </SheetTrigger>
       <SheetContent side="right" className="p-0 gap-0 border-none sm:max-w-3xl md:max-w-4xl overflow-y-auto overflow-x-hidden flex flex-col">
-        <div className="bg-gradient-to-br from-indigo-600 to-blue-700 p-8 text-white relative">
+        <div className="bg-linear-to-br from-indigo-600 to-blue-700 p-8 text-white relative text-left">
             <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
             
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10">
-                <div className="flex items-center gap-5">
-                    <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-xl">
-                        <User className="w-10 h-10 text-white" />
+                <div className="flex items-center gap-6">
+                    <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-xl border border-white/30 flex items-center justify-center p-1 group overflow-hidden shadow-2xl">
+                        <Avatar className="w-full h-full rounded-2xl">
+                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.gender === '男' ? 'male' : 'female'}_${student.name}`} />
+                            <AvatarFallback className="text-2xl bg-indigo-100 text-indigo-600 font-bold">{student.name[0]}</AvatarFallback>
+                        </Avatar>
                     </div>
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <SheetTitle className="text-3xl font-bold tracking-tight text-white">{student.name}</SheetTitle>
-                            <Badge className={cn("bg-white/20 text-white border-white/30 hover:bg-white/30 px-3")}>
-                                {statusMap[student.status]?.label || student.status}
+                        <div className="flex items-center gap-3 mb-2">
+                            <SheetTitle className="text-3xl font-bold tracking-tight text-white m-0">
+                                {student.name}
+                            </SheetTitle>
+                            <Badge className={cn("rounded-full px-3", statusMap[student.status?.toLowerCase() || 'active']?.color)}>
+                                {statusMap[student.status?.toLowerCase() || 'active']?.label || "在读"}
                             </Badge>
                         </div>
-                        <SheetDescription className="text-white/80 font-mono text-base mt-1 tracking-wider">
-                            {student.student_no}
+                        <SheetDescription className="flex flex-wrap items-center gap-x-6 gap-y-2 text-indigo-100/80 text-sm">
+                            <span className="flex items-center gap-1.5"><User className="w-4 h-4" /> 学号：{student.student_no}</span>
+                            <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> 班级：{student.classes ? `${student.classes.grade} ${student.classes.name}` : (student.class_id || "未分配")}</span>
                         </SheetDescription>
-                    </div>
                 </div>
                 
-                <div className="flex items-center gap-8 text-sm">
-                    <div className="flex flex-col items-center md:items-end">
-                        <span className="text-white/60 text-xs uppercase tracking-widest font-bold mb-1">所属班级</span>
-                        <span className="font-bold text-lg flex items-center gap-2">
-                            <GraduationCap className="w-5 h-5 text-blue-200" />
-                            {student.classes ? `${student.classes.grade} ${student.classes.name}` : "未分配"}
-                        </span>
-                    </div>
-                    <div className="w-px h-10 bg-white/20 hidden md:block" />
-                    <div className="flex flex-col items-center md:items-end">
-                        <span className="text-white/60 text-xs uppercase tracking-widest font-bold mb-1">联系家长</span>
-                        <span className="font-bold text-lg flex items-center gap-2">
-                            <Phone className="w-5 h-5 text-emerald-200" />
-                            {student.parent_name || "未填写"}
-                        </span>
-                    </div>
+                <div className="flex items-center gap-3">
+                    {/* 暂时隐藏导出按钮，待逻辑优化后再开启 */}
+                    {/* 
+                    <Button 
+                        onClick={handleExportPDF} 
+                        disabled={exporting || loading}
+                        className="bg-white/20 hover:bg-white/30 text-white border-white/20 backdrop-blur-md rounded-xl px-4 py-3 h-auto"
+                    >
+                        {exporting ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                            <TrendingUp className="w-4 h-4 mr-2" />
+                        )}
+                        导出正式报告
+                    </Button>
+                    */}
                 </div>
             </div>
         </div>
 
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="px-8 border-b bg-white dark:bg-zinc-950 sticky top-0 z-20">
-            <TabsList className="h-16 bg-transparent gap-8">
+            <TabsList className="bg-transparent border-none p-0 h-16 gap-8">
               <TabsTrigger 
                 value="overview" 
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-4 data-[state=active]:border-blue-600 rounded-none px-0 h-16 text-base font-bold transition-all"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none h-full px-1 font-bold transition-all"
               >
-                <Info className="w-5 h-5 mr-2" />
-                个人档案
+                基础档案
               </TabsTrigger>
               <TabsTrigger 
-                value="performance" 
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-4 data-[state=active]:border-blue-600 rounded-none px-0 h-16 text-base font-bold transition-all"
+                value="analytics" 
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none h-full px-1 font-bold transition-all"
               >
-                <BarChart3 className="w-5 h-5 mr-2" />
                 学业看板
               </TabsTrigger>
               <TabsTrigger 
                 value="history" 
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-4 data-[state=active]:border-blue-600 rounded-none px-0 h-16 text-base font-bold transition-all"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 rounded-none h-full px-1 font-bold transition-all"
               >
-                <History className="w-5 h-5 mr-2" />
-                成绩详情
+                考勤/成绩历史
               </TabsTrigger>
             </TabsList>
           </div>
@@ -298,49 +374,6 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
                     </div>
                 </div>
               </div>
-              
-                    <div className="rounded-2xl border p-6 bg-white dark:bg-zinc-950 space-y-6 shadow-md border-zinc-200/60 dark:border-zinc-800/60 transition-all hover:shadow-lg w-full overflow-hidden">
-                 <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-base flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-blue-600" />
-                        核心成绩趋势
-                    </h3>
-                    <Badge variant="outline" className="text-xs font-semibold px-2 py-0.5 border-blue-200 text-blue-800 bg-blue-50/50">
-                        平均得分率 (%)
-                    </Badge>
-                 </div>
-                 <div className="h-[250px] w-full">
-                    {loading ? (
-                        <div className="h-full w-full flex items-center justify-center">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                        </div>
-                    ) : examTrendData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={examTrendData} margin={{ top: 10, right: 30, bottom: 20, left: 10 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                <XAxis dataKey="name" fontSize={12} tick={{fill: '#94a3b8'}} axisLine={false} tickLine={false} />
-                                <YAxis domain={[0, 100]} hide />
-                                <Tooltip 
-                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' }}
-                                    formatter={(value) => [`${value}%`, '综合得分率']}
-                                />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="percentage" 
-                                    stroke="#3b82f6" 
-                                    strokeWidth={4} 
-                                    dot={{ r: 6, strokeWidth: 3, fill: '#fff', stroke: '#3b82f6' }}
-                                    activeDot={{ r: 8, strokeWidth: 0, fill: '#1e40af' }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="h-full w-full flex flex-col items-center justify-center text-muted-foreground text-sm italic border-2 border-dashed rounded-xl border-zinc-100 dark:border-zinc-800">
-                            暂无历史考核数据，趋势图将在录入成绩后显示
-                        </div>
-                    )}
-                 </div>
-              </div>
             </TabsContent>
 
             <TabsContent value="performance" className="mt-0 space-y-8">
@@ -350,9 +383,9 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
                              <TrendingUp className="w-5 h-5 text-indigo-500" />
                              历史考评波动明细
                         </h3>
-                        <div className="flex-1 min-h-0">
+                        <div className="flex-1 min-h-0" ref={chartRef}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={examTrendData} margin={{ top: 10, right: 30, bottom: 20, left: 10 }}>
+                                <LineChart data={examTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="name" fontSize={11} tickMargin={10} axisLine={false} />
                                     <YAxis fontSize={11} domain={[0, 100]} axisLine={false} />
@@ -361,12 +394,22 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
                                     />
                                     <Legend iconType="circle" wrapperStyle={{paddingTop: '20px'}} />
                                     <Line 
-                                        name="全科平均水平"
+                                        name="我的表现"
                                         type="monotone" 
                                         dataKey="percentage" 
-                                        stroke="#6366f1" 
-                                        strokeWidth={3}
-                                        dot={{ r: 4 }}
+                                        stroke="#3b82f6" 
+                                        strokeWidth={4}
+                                        dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                                        activeDot={{ r: 6 }}
+                                    />
+                                    <Line 
+                                        name="班级平均"
+                                        type="monotone" 
+                                        dataKey="classAverage" 
+                                        stroke="#94a3b8" 
+                                        strokeWidth={2}
+                                        strokeDasharray="5 5"
+                                        dot={false}
                                     />
                                 </LineChart>
                             </ResponsiveContainer>
@@ -410,7 +453,26 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
                     </div>
                     <div className="text-sm text-indigo-900 dark:text-indigo-300">
                         <p className="font-bold text-base mb-1">学情智能分析</p>
-                        <p className="leading-relaxed">根据近期数据，「{student.name}」在各项评估中呈现{examTrendData.length > 1 && (examTrendData[examTrendData.length-1].percentage >= examTrendData[examTrendData.length-2].percentage ? "稳步上升" : "波动")}趋势。{subjectPerformanceData.length > 0 && `其中「${[...subjectPerformanceData].sort((a,b) => b.avgPercentage - a.avgPercentage)[0].subject}」科目表现最为突出。`}建议在薄弱科目上多加关注，保持目前的学习势头。</p>
+                        <p className="leading-relaxed">
+                            根据近期数据，「{student.name}」在各项评估中呈现
+                            <span className="font-bold mx-1">
+                                {examTrendData.length > 1 && (examTrendData[examTrendData.length-1].percentage >= examTrendData[examTrendData.length-2].percentage ? "稳步上升" : "波动")}
+                            </span>
+                            趋势。最新的综合得分率为 
+                            <span className="font-bold text-blue-600 mx-1">
+                                {examTrendData[examTrendData.length-1]?.percentage}%
+                            </span>
+                            ，{examTrendData[examTrendData.length-1]?.classAverage > 0 && (
+                                <>
+                                    比班级平均水平
+                                    <span className={cn("font-bold mx-1", examTrendData[examTrendData.length-1].percentage >= examTrendData[examTrendData.length-1].classAverage ? "text-emerald-600" : "text-rose-600")}>
+                                        {examTrendData[examTrendData.length-1].percentage >= examTrendData[examTrendData.length-1].classAverage ? "高出" : "低于"}
+                                        {Math.abs(parseFloat((examTrendData[examTrendData.length-1].percentage - examTrendData[examTrendData.length-1].classAverage).toFixed(1)))}%
+                                    </span>。
+                                </>
+                            )}
+                            {subjectPerformanceData.length > 0 && `其中「${[...subjectPerformanceData].sort((a,b) => b.avgPercentage - a.avgPercentage)[0].subject}」科目表现最为突出。`}
+                        </p>
                     </div>
                 </div>
             </TabsContent>

@@ -160,3 +160,63 @@ export async function getStudentGrades(studentId: string) {
     return (a.courses?.name || "").localeCompare(b.courses?.name || "");
   });
 }
+export async function getStudentGrowthData(studentId: string, classId: string) {
+  const supabase = await createClient();
+
+  // 1. 获取学生的个人成绩
+  const { data: studentGrades, error: sError } = await supabase
+    .from("grades")
+    .select(`
+      score,
+      exam_id,
+      exams (name, exam_date, id),
+      course_id,
+      courses (name, max_score)
+    `)
+    .eq("student_id", studentId);
+
+  if (sError) throw new Error(sError.message);
+  if (!studentGrades || studentGrades.length === 0) return null;
+
+  // 2. 获取该学生参加的所有考试 ID
+  const examIds = Array.from(new Set(studentGrades.map((g: any) => g.exam_id).filter(Boolean)));
+
+  // 3. 获取全班在这些考试中的所有成绩，用于计算均分
+  const { data: classGrades, error: cError } = await supabase
+    .from("grades")
+    .select(`
+      score,
+      exam_id,
+      student_id,
+      courses (max_score),
+      students!inner(class_id)
+    `)
+    .in("exam_id", examIds)
+    .eq("students.class_id", classId);
+
+  if (cError) throw new Error(cError.message);
+
+  // 4. 按考试计算班级平均得分率
+  const classExamStats: Record<string, { totalRatio: number; count: number }> = {};
+  classGrades?.forEach((g: any) => {
+    const eId = g.exam_id;
+    const max = g.courses?.max_score || 100;
+    const ratio = (g.score || 0) / max;
+    
+    if (!classExamStats[eId]) {
+      classExamStats[eId] = { totalRatio: 0, count: 0 };
+    }
+    classExamStats[eId].totalRatio += ratio;
+    classExamStats[eId].count += 1;
+  });
+
+  const classAverages = Object.entries(classExamStats).reduce((acc: any, [eId, stats]) => {
+    acc[eId] = parseFloat(((stats.totalRatio / stats.count) * 100).toFixed(1));
+    return acc;
+  }, {});
+
+  return {
+    studentGrades,
+    classAverages
+  };
+}
