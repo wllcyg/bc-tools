@@ -51,10 +51,11 @@ interface TeacherDialogProps {
     subject: string;
     phone?: string;
   };
+  subjects?: string[];
   trigger?: React.ReactNode;
 }
 
-export function TeacherDialog({ teacher, trigger }: TeacherDialogProps) {
+export function TeacherDialog({ teacher, subjects = [], trigger }: TeacherDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -152,9 +153,20 @@ export function TeacherDialog({ teacher, trigger }: TeacherDialogProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>教授科目</FormLabel>
-                    <FormControl>
-                      <Input placeholder="如：数学" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择教授科目" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {subjects.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

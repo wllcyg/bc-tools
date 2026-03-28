@@ -134,7 +134,7 @@ export default function LoginPage() {
                       <div className="flex items-center justify-between">
                         <FormLabel className="text-xs font-bold uppercase tracking-wider text-zinc-500">登录密码</FormLabel>
                         <Link
-                          href="#"
+                          href="/login/forgot-password"
                           className="text-xs font-semibold text-zinc-900 hover:text-blue-600 transition-colors dark:text-zinc-100 dark:hover:text-blue-400"
                         >
                           忘记密码?

@@ -1,7 +1,7 @@
 -- Migration: Add Student Homework Results Module (Consolidated)
 -- Version: v0.1.2
 
--- 1. 学生作业成果记录表
+-- 1. 学生作业记录表
 CREATE TABLE IF NOT EXISTS public.student_homework_results (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id    UUID REFERENCES public.students(id) ON DELETE CASCADE,

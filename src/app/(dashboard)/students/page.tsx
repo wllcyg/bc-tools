@@ -18,6 +18,8 @@ import { ImportStudentsDialog } from "./_components/import-students-dialog";
 import { StudentFilters } from "./_components/student-filters";
 import { DeleteButton } from "@/components/common/delete-button";
 import { deleteStudent } from "./actions";
+import { HomeworkResultDialog } from "../homework-results/_components/homework-result-dialog";
+import { ClipboardCheck } from "lucide-react";
 
 async function StudentsList({ 
   classId, 
@@ -28,14 +30,20 @@ async function StudentsList({
 }) {
   const supabase = await createClient();
 
-  // 获取班级列表用于 Dialog
+  // 获取班级和课程列表用于组件
   const { data: classes } = await supabase
     .from("classes")
     .select("id, name, grade")
     .order("grade")
     .order("name");
 
+  const { data: courses } = await supabase
+    .from("courses")
+    .select("id, name")
+    .order("name");
+
   const classesData = classes || [];
+  const coursesData = courses || [];
 
   // 构建查询
   let query = supabase
@@ -124,6 +132,17 @@ async function StudentsList({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
+                  <HomeworkResultDialog
+                    students={students.map(s => ({ id: s.id, name: s.name, student_no: s.student_no }))}
+                    courses={coursesData}
+                    defaultStudentId={student.id}
+                    trigger={
+                      <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                        <ClipboardCheck className="h-4 w-4 mr-1" />
+                        记录
+                      </Button>
+                    }
+                  />
                   <StudentDetailDrawer student={student} />
                   <StudentDialog
                     student={student}

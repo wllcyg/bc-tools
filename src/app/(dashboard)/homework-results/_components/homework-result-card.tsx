@@ -23,6 +23,8 @@ import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
   DialogContent, 
+  DialogHeader,
+  DialogTitle,
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { deleteHomeworkResult } from "../actions";
@@ -74,6 +76,9 @@ export function HomeworkResultCard({ result }: { result: HomeworkResult }) {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-4xl p-0 overflow-hidden border-none bg-black/90">
+                    <DialogHeader className="sr-only">
+                      <DialogTitle>查看作品原图: {result.title}</DialogTitle>
+                    </DialogHeader>
                     <img src={result.image_url} alt={result.title} className="w-full h-auto max-h-[80vh] object-contain" />
                   </DialogContent>
                 </Dialog>

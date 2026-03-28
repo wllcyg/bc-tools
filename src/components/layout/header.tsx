@@ -77,11 +77,11 @@ export function Header() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>我的账户</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/profile")}>
                   <UserIcon className="mr-2 h-4 w-4" />
                   <span>个人中心</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/settings")}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>设置</span>
                 </DropdownMenuItem>

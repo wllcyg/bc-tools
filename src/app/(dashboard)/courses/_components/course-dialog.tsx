@@ -235,6 +235,12 @@ export function CourseDialog({
                                       const current = field.value || [];
                                       if (checked) {
                                         field.onChange([...current, cls.id]);
+                                        
+                                        // 自动建议名称：如果当前名称为空，则根据选中的班级年级自动填入
+                                        const currentName = form.getValues("name");
+                                        if (!currentName || currentName.trim() === "") {
+                                          form.setValue("name", `${cls.grade}语文`);
+                                        }
                                       } else {
                                         field.onChange(
                                           current.filter((id) => id !== cls.id)

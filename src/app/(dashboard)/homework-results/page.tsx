@@ -10,6 +10,8 @@ import { HomeworkResultCard } from "./_components/homework-result-card";
 interface SearchParams {
   student_id?: string;
   course_id?: string;
+  class_id?: string;
+  search_name?: string;
 }
 
 interface HomeworkResult {
@@ -18,31 +20,35 @@ interface HomeworkResult {
   content: string | null;
   image_url: string | null;
   record_date: string;
-  students: { name: string, student_no: string } | null;
+  students: { name: string, student_no: string, class_id: string } | null;
   courses: { name: string } | null;
 }
 
-async function ResultsList({ 
-  student_id, 
-  course_id 
-}: { 
-  student_id?: string, 
-  course_id?: string 
+async function ResultsList({
+  student_id,
+  course_id,
+  class_id,
+  search_name
+}: {
+  student_id?: string,
+  course_id?: string,
+  class_id?: string,
+  search_name?: string
 }) {
-  const results = await getHomeworkResults({ student_id, course_id });
+  const results = await getHomeworkResults({ student_id, course_id, class_id, search_name });
 
   if (!results || results.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 border border-dashed rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/50 text-muted-foreground">
         <ImageIcon className="h-10 w-10 mb-4 opacity-20" />
-        <p>暂无作业成果记录</p>
+        <p>暂无作业记录</p>
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {results.map((result: HomeworkResult) => (
+      {results.map((result: any) => (
         <HomeworkResultCard key={result.id} result={result} />
       ))}
     </div>
@@ -62,39 +68,64 @@ function ListSkeleton() {
 export default async function HomeworkResultsPage(props: {
   searchParams: Promise<SearchParams>
 }) {
-  const { student_id, course_id } = await props.searchParams;
+  const { student_id, course_id, class_id, search_name } = await props.searchParams;
   const supabase = await createClient();
 
   const [
     { data: students },
-    { data: courses }
+    { data: rawCourses },
+    { data: classes }
   ] = await Promise.all([
     supabase.from("students").select("id, name, student_no").order("name"),
-    supabase.from("courses").select("id, name").order("name")
+    supabase.from("courses").select(`
+      id, 
+      name,
+      course_classes (
+        classes (
+          grade
+        )
+      )
+    `).order("name"),
+    supabase.from("classes").select("id, name, grade").order("grade")
   ]);
 
+  // 处理课程数据，附加年级信息
+  const courses = rawCourses?.map((c: any) => {
+    const grades = Array.from(new Set(c.course_classes?.map((cc: any) => cc.classes?.grade).filter(Boolean)));
+    return {
+      id: c.id,
+      name: grades.length > 0 ? `${c.name} (${grades.join(", ")})` : c.name
+    };
+  }) || [];
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-            作业成果库
+          <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+            作业库
           </h1>
           <p className="text-muted-foreground mt-1">记录并展示学生的作业实物成果与教师点评。</p>
         </div>
-        <HomeworkResultDialog 
-          students={students || []} 
-          courses={courses || []} 
+        <HomeworkResultDialog
+          students={students || []}
+          courses={courses || []}
         />
       </div>
 
-      <HomeworkResultFilters 
-        students={students || []} 
-        courses={courses || []} 
+      <HomeworkResultFilters
+        students={students || []}
+        courses={courses || []}
+        classes={classes || []}
       />
 
-      <Suspense key={`${student_id}-${course_id}`} fallback={<ListSkeleton />}>
-        <ResultsList student_id={student_id} course_id={course_id} />
+      <Suspense key={`${student_id}-${course_id}-${class_id}-${search_name}`} fallback={<ListSkeleton />}>
+        <ResultsList 
+          student_id={student_id} 
+          course_id={course_id} 
+          class_id={class_id}
+          search_name={search_name}
+        />
       </Suspense>
     </div>
   );

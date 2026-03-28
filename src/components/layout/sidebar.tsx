@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Users, 
-  GraduationCap, 
-  UserRound, 
+import {
+  LayoutDashboard,
+  Users,
+  GraduationCap,
+  UserRound,
   Settings,
   BookOpen,
   BookMarked,
@@ -33,7 +33,7 @@ const menuItems: MenuItem[] = [
   { icon: BookMarked, label: "课程管理", href: "/courses", roles: ["admin", "edu_admin"] },
   { icon: FileText, label: "考试管理", href: "/exams", roles: ["admin", "edu_admin"] },
   { icon: BarChart, label: "成绩管理", href: "/grades", roles: ["admin", "edu_admin", "teacher"] },
-  { icon: BookOpen, label: "作业成果", href: "/homework-results", roles: ["admin", "edu_admin", "teacher"] },
+  { icon: BookOpen, label: "作业", href: "/homework-results", roles: ["admin", "edu_admin", "teacher"] },
   { icon: Settings, label: "系统设置", href: "/settings", roles: ["admin"] },
 ];
 
@@ -69,16 +69,16 @@ export function Sidebar() {
                 href={item.href}
                 className={cn(
                   "group flex items-center rounded-lg px-2 py-2 text-sm transition-colors",
-                  isActive 
-                    ? "bg-[#ecf5ff] text-[#409eff]" 
+                  isActive
+                    ? "bg-[#ecf5ff] text-[#409eff]"
                     : "text-[#606266] hover:bg-[#f5f7fa] hover:text-[#409eff]"
                 )}
               >
-                <item.icon 
+                <item.icon
                   className={cn(
                     "mr-3 h-5 w-5 shrink-0 transition-colors",
                     isActive ? "text-[#409eff]" : "text-[#909399] group-hover:text-[#409eff]"
-                  )} 
+                  )}
                 />
                 {item.label}
               </Link>

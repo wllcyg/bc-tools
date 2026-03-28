@@ -14,10 +14,10 @@ import {
 } from "@/components/ui/select";
 
 interface TeacherFiltersProps {
-  // 暂时移除科目列表，后续可改为从教师数据中提取唯一值
+  subjects: string[];
 }
 
-export function TeacherFilters({}: TeacherFiltersProps) {
+export function TeacherFilters({ subjects }: TeacherFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -68,7 +68,11 @@ export function TeacherFilters({}: TeacherFiltersProps) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">所有科目</SelectItem>
-          {/* 计划：此处可改为从教师数据中提取唯一科目名称 */}
+          {subjects.map((s) => (
+            <SelectItem key={s} value={s}>
+              {s}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

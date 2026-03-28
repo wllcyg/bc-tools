@@ -19,10 +19,12 @@ import { deleteTeacher } from "./actions";
 
 async function TeachersList({ 
   keyword, 
-  subject 
+  subject,
+  allSubjects
 }: { 
   keyword?: string, 
-  subject?: string 
+  subject?: string,
+  allSubjects: string[]
 }) {
   const supabase = await createClient();
   
@@ -85,6 +87,7 @@ async function TeachersList({
                 <div className="flex items-center justify-end gap-1">
                   <TeacherDialog
                     teacher={teacher}
+                    subjects={allSubjects}
                     trigger={
                       <Button variant="ghost" size="sm" className="hover:text-primary text-xs h-8">编辑</Button>
                     }
@@ -115,6 +118,11 @@ export default async function TeachersPage(props: {
   searchParams: Promise<{ keyword?: string, subject?: string }>
 }) {
   const { keyword, subject } = await props.searchParams;
+  const supabase = await createClient();
+
+  // 获取所有课程名称作为候选科目
+  const { data: coursesData } = await supabase.from("courses").select("name");
+  const allSubjects = Array.from(new Set(coursesData?.map(c => c.name) || [])).sort();
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -125,13 +133,17 @@ export default async function TeachersPage(props: {
           </h1>
           <p className="text-muted-foreground mt-1">管理全校教职工信息及其任教科目。</p>
         </div>
-        <TeacherDialog />
+        <TeacherDialog subjects={allSubjects} />
       </div>
 
-      <TeacherFilters />
+      <TeacherFilters subjects={allSubjects} />
 
       <Suspense key={`${keyword}-${subject}`} fallback={<ListSkeleton />}>
-        <TeachersList keyword={keyword} subject={subject} />
+        <TeachersList 
+          keyword={keyword} 
+          subject={subject} 
+          allSubjects={allSubjects} 
+        />
       </Suspense>
     </div>
   );

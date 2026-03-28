@@ -47,11 +47,15 @@ interface Course {
 interface HomeworkResultDialogProps {
   students: Student[];
   courses: Course[];
+  trigger?: React.ReactNode;
+  defaultStudentId?: string;
 }
 
 export function HomeworkResultDialog({
   students,
   courses,
+  trigger,
+  defaultStudentId,
 }: HomeworkResultDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -133,13 +137,14 @@ export function HomeworkResultDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          size="lg"
-          className="rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-0"
-        >
-          <Plus className="mr-2 h-5 w-5" />
-          记录新成果
-        </Button>
+        {trigger || (
+          <Button
+            className="h-10 px-6 shadow-sm hover:shadow-md transition-all active:scale-95"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            记录作业
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent
@@ -150,10 +155,10 @@ export function HomeworkResultDialog({
         <form onSubmit={handleSubmit} className="flex flex-col">
           <DialogHeader className="p-8 pb-4 text-left">
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-              记录作业成果
+              记录作业
             </DialogTitle>
             <DialogDescription className="text-zinc-500">
-              为学生建立作业成果档案，上传照片并记录点评。
+              为学生建立作业档案，上传照片并记录点评。
             </DialogDescription>
           </DialogHeader>
 
@@ -166,7 +171,7 @@ export function HomeworkResultDialog({
                 >
                   关联学生
                 </Label>
-                <Select name="student_id" required>
+                <Select name="student_id" required defaultValue={defaultStudentId}>
                   <SelectTrigger
                     id="student_id"
                     className="rounded-xl bg-zinc-50 border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800"
@@ -265,11 +270,10 @@ export function HomeworkResultDialog({
               </Label>
               <div
                 {...getRootProps()}
-                className={`relative border-2 border-dashed rounded-3xl transition-all group overflow-hidden cursor-pointer ${
-                  isDragActive
-                    ? "border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20"
-                    : "border-zinc-200 dark:border-zinc-800 hover:border-indigo-400 bg-zinc-50/50 dark:bg-zinc-900/50"
-                }`}
+                className={`relative border-2 border-dashed rounded-3xl transition-all group overflow-hidden cursor-pointer ${isDragActive
+                  ? "border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20"
+                  : "border-zinc-200 dark:border-zinc-800 hover:border-indigo-400 bg-zinc-50/50 dark:bg-zinc-900/50"
+                  }`}
               >
                 <input {...getInputProps()} />
 

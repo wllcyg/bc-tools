@@ -3,14 +3,26 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function getHomeworkResults(filters?: { student_id?: string, course_id?: string }) {
+export async function getHomeworkResults(filters?: { 
+  student_id?: string, 
+  course_id?: string,
+  class_id?: string,
+  search_name?: string
+}) {
   const supabase = await createClient();
   let query = supabase
     .from("student_homework_results")
     .select(`
       *,
-      students (name, student_no),
-      courses (name)
+      students!inner (name, student_no, class_id),
+      courses (
+        name,
+        course_classes (
+          classes (
+            grade
+          )
+        )
+      )
     `)
     .order("record_date", { ascending: false });
 
@@ -20,10 +32,28 @@ export async function getHomeworkResults(filters?: { student_id?: string, course
   if (filters?.course_id) {
     query = query.eq("course_id", filters.course_id);
   }
+  if (filters?.class_id) {
+    query = query.eq("students.class_id", filters.class_id);
+  }
+  if (filters?.search_name) {
+    query = query.ilike("students.name", `%${filters.search_name}%`);
+  }
 
   const { data, error } = await query;
   if (error) throw error;
-  return data;
+
+  // 格式化课程名称包含年级
+  const formattedData = data.map((item: any) => {
+    if (item.courses) {
+      const grades = Array.from(new Set(item.courses.course_classes?.map((cc: any) => cc.classes?.grade).filter(Boolean)));
+      if (grades.length > 0) {
+        item.courses.name = `${item.courses.name} (${grades.join(", ")})`;
+      }
+    }
+    return item;
+  });
+
+  return formattedData;
 }
 
 export async function createHomeworkResult(formData: FormData) {
