@@ -26,7 +26,13 @@ export default function ProfilePage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [selectedGender, setSelectedGender] = useState<"男" | "女">("男");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const AVATAR_PRESETS = {
+    男: ["m1", "m2", "m3", "m4", "m5", "m6"],
+    女: ["f1", "f2", "f3", "f4", "f5", "f6"],
+  };
 
   useEffect(() => {
     if (profile) {
@@ -52,7 +58,7 @@ export default function ProfilePage() {
 
     setUpdating(true);
     try {
-      await updateProfile({ full_name: fullName });
+      await updateProfile({ full_name: fullName, avatar_url: avatarUrl });
       toast.success("个人信息已更新");
       router.refresh();
     } catch (error: any) {
@@ -245,6 +251,46 @@ export default function ProfilePage() {
                     placeholder="请输入真实姓名或昵称"
                     className="pl-10 h-11 bg-slate-50/50 focus:bg-white dark:bg-slate-950/50 transition-all border-slate-200 dark:border-slate-800 rounded-lg"
                   />
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">选择头像</Label>
+                <div className="flex gap-2 mb-2">
+                  <Button 
+                    variant={selectedGender === "男" ? "default" : "outline"} 
+                    size="sm" 
+                    onClick={() => setSelectedGender("男")}
+                    className="h-8 rounded-full px-4 text-xs"
+                  >
+                    男生风格
+                  </Button>
+                  <Button 
+                    variant={selectedGender === "女" ? "default" : "outline"} 
+                    size="sm" 
+                    onClick={() => setSelectedGender("女")}
+                    className="h-8 rounded-full px-4 text-xs"
+                  >
+                    女生风格
+                  </Button>
+                </div>
+                <div className="grid grid-cols-6 gap-3 p-4 rounded-xl border border-slate-100 bg-slate-50/30 dark:border-slate-800 dark:bg-slate-900/10">
+                  {AVATAR_PRESETS[selectedGender].map((seed) => {
+                    const url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+                    const isSelected = avatarUrl === url;
+                    return (
+                      <div
+                        key={seed}
+                        onClick={() => setAvatarUrl(url)}
+                        className={cn(
+                          "cursor-pointer rounded-xl p-1 border-2 transition-all hover:scale-110 aspect-square flex items-center justify-center",
+                          isSelected ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20 shadow-sm" : "border-transparent bg-white dark:bg-slate-800"
+                        )}
+                      >
+                        <img src={url} alt="Avatar" className="w-full h-full" />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

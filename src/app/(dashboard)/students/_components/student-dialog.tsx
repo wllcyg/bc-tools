@@ -50,6 +50,7 @@ const studentSchema = z.object({
   parent_name: z.string().optional(),
   parent_phone: z.string().optional(),
   status: z.enum(["active", "leave", "suspended", "graduated", "dropped"]),
+  avatar_url: z.string().optional(),
 });
 
 type StudentFormValues = z.infer<typeof studentSchema>;
@@ -64,7 +65,13 @@ interface Student {
   parent_name?: string | null;
   parent_phone?: string | null;
   status: "active" | "leave" | "suspended" | "graduated" | "dropped";
+  avatar_url?: string | null;
 }
+
+const AVATAR_PRESETS = {
+  男: ["m1", "m2", "m3", "m4", "m5", "m6"],
+  女: ["f1", "f2", "f3", "f4", "f5", "f6"],
+};
 
 interface StudentDialogProps {
   student?: Student;
@@ -86,8 +93,12 @@ export function StudentDialog({ student, classes, trigger }: StudentDialogProps)
       parent_name: student?.parent_name || "",
       parent_phone: student?.parent_phone || "",
       status: (student?.status as Student["status"]) || "active",
+      avatar_url: student?.avatar_url || "",
     },
   });
+
+  const currentGender = form.watch("gender");
+  const currentAvatar = form.watch("avatar_url");
 
   async function onSubmit(values: StudentFormValues) {
     setLoading(true);
@@ -124,6 +135,36 @@ export function StudentDialog({ student, classes, trigger }: StudentDialogProps)
                 填写学生的基本信息、出生日期及班级归属。
               </DialogDescription>
             </DialogHeader>
+
+            {/* 头像选择器 */}
+            <FormField
+              control={form.control}
+              name="avatar_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>选择头像</FormLabel>
+                  <div className="grid grid-cols-6 gap-2 mt-2">
+                    {(AVATAR_PRESETS[currentGender as keyof typeof AVATAR_PRESETS] || []).map((seed) => {
+                      const url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+                      const isSelected = field.value === url;
+                      return (
+                        <div
+                          key={seed}
+                          onClick={() => field.onChange(url)}
+                          className={cn(
+                            "cursor-pointer rounded-xl p-1 border-2 transition-all hover:scale-105",
+                            isSelected ? "border-indigo-600 bg-indigo-50" : "border-transparent bg-zinc-50"
+                          )}
+                        >
+                          <img src={url} alt="Avatar" className="w-full h-full" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

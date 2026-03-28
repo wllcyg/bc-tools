@@ -265,7 +265,7 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
                 <div className="flex items-center gap-6">
                     <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-xl border border-white/30 flex items-center justify-center p-1 group overflow-hidden shadow-2xl">
                         <Avatar className="w-full h-full rounded-2xl">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${student.gender === '男' ? 'male' : 'female'}_${student.name}`} />
+                            <AvatarImage src={student.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${student.gender === '男' ? 'male' : 'female'}_${student.name}`} />
                             <AvatarFallback className="text-2xl bg-indigo-100 text-indigo-600 font-bold">{student.name[0]}</AvatarFallback>
                         </Avatar>
                     </div>

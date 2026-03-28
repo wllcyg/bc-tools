@@ -13,7 +13,8 @@ const studentSchema = z.object({
   class_id: z.string().min(1, "班级必填"),
   parent_name: z.string().optional(),
   parent_phone: z.string().optional(),
-  status: z.string().default("在校"),
+  status: z.string().default("active"),
+  avatar_url: z.string().optional(),
 });
 
 export async function createStudent(rawFormData: any) {
