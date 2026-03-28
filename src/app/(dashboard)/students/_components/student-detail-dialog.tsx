@@ -54,6 +54,7 @@ interface StudentBlock {
   student_no: string;
   gender: string;
   birth_date?: string;
+  avatar_url?: string | null;
   status: string;
   parent_name?: string;
   parent_phone?: string;

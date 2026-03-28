@@ -27,14 +27,11 @@ import {
 import { 
   User, 
   Phone, 
-  GraduationCap, 
   BarChart3, 
-  History,
   TrendingUp,
   Info,
   Loader2,
   Calendar,
-  X
 } from "lucide-react";
 import { format } from "date-fns";
 import { getStudentGrades, getStudentGrowthData } from "../actions";
@@ -79,6 +76,7 @@ interface Student {
   status: string;
   gender: string;
   birth_date?: string;
+  avatar_url?: string | null;
   created_at?: string;
   parent_name?: string;
   parent_phone?: string;
@@ -111,11 +109,12 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
   const [grades, setGrades] = useState<Grade[]>([]);
   const [classAverages, setClassAverages] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  // const [exporting, setExporting] = useState(false);
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const chartRef = useRef<HTMLDivElement>(null);
 
+  /*
   const handleExportPDF = async () => {
     if (!student) return;
 
@@ -161,6 +160,7 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
       setExporting(false);
     }
   };
+  */
 
   useEffect(() => {
     async function loadGrowthData() {
@@ -189,7 +189,7 @@ export function StudentDetailDrawer({ student, trigger }: StudentDetailDrawerPro
     if (open && student?.id) {
       loadGrowthData();
     }
-  }, [open, student?.id]);
+  }, [open, student?.id, student?.class_id]);
 
   const statusMap: Record<string, { label: string; color: string }> = {
     active: { label: "在读", color: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400" },
