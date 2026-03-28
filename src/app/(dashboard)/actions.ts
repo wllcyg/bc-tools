@@ -123,14 +123,20 @@ export async function getEnrollmentTrend() {
 
   // 这里的统计逻辑在 Supabase 中通过 count 配合范围查询实现
   // 为了性能，实际生产环境建议使用 RPC 或预聚合表
-  for (const m of months) {
-    const { count } = await supabase
-      .from("students")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", m.start)
-      .lt("created_at", m.end);
-    m.count = count || 0;
-  }
+  // 使用 Promise.all 并行化查询，大幅提升加载速度
+  const counts = await Promise.all(
+    months.map(m => 
+      supabase
+        .from("students")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", m.start)
+        .lt("created_at", m.end)
+    )
+  );
+
+  counts.forEach((res, i) => {
+    months[i].count = res.count || 0;
+  });
 
   return months.map(m => ({ name: m.month, students: m.count }));
 }

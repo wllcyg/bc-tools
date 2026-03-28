@@ -3,47 +3,58 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 
-export async function createStudent(formData: {
-  name: string;
-  gender: string;
-  birth_date: string;
-  class_id: string;
-  parent_name?: string;
-  parent_phone?: string;
-  status: string;
-}) {
-  const supabase = await createClient();
+import { successResponse, errorResponse } from "@/lib/actions-utils";
+import { z } from "zod";
 
-  // 1. 生成学号 S + YEAR + 4位序列 (e.g., S20260001)
-  const year = new Date().getFullYear();
-  const prefix = `S${year}`;
+const studentSchema = z.object({
+  name: z.string().min(1, "名称必填"),
+  gender: z.string().min(1, "性别必填"),
+  birth_date: z.string().min(1, "出生日期必填"),
+  class_id: z.string().min(1, "班级必填"),
+  parent_name: z.string().optional(),
+  parent_phone: z.string().optional(),
+  status: z.string().default("在校"),
+});
 
-  const { data: lastStudent } = await supabase
-    .from("students")
-    .select("student_no")
-    .like("student_no", `${prefix}%`)
-    .order("student_no", { ascending: false })
-    .limit(1)
-    .single();
+export async function createStudent(rawFormData: any) {
+  try {
+    // 1. 服务端校验
+    const validated = studentSchema.parse(rawFormData);
+    const supabase = await createClient();
 
-  let nextSeq = 1;
-  if (lastStudent) {
-    const lastSeq = parseInt(lastStudent.student_no.replace(prefix, ""));
-    nextSeq = lastSeq + 1;
+    // 2. 生成学号 S + YEAR + 4位序列 (e.g., S20260001)
+    const year = new Date().getFullYear();
+    const prefix = `S${year}`;
+
+    const { data: lastStudent } = await supabase
+      .from("students")
+      .select("student_no")
+      .like("student_no", `${prefix}%`)
+      .order("student_no", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let nextSeq = 1;
+    if (lastStudent) {
+      const lastSeq = parseInt(lastStudent.student_no.replace(prefix, ""));
+      nextSeq = lastSeq + 1;
+    }
+    const student_no = `${prefix}${nextSeq.toString().padStart(4, "0")}`;
+
+    // 3. 插入数据
+    const { data, error } = await supabase
+      .from("students")
+      .insert([{ ...validated, student_no }])
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath("/students");
+    return successResponse(data);
+  } catch (err: any) {
+    return errorResponse(err instanceof z.ZodError ? err.issues[0].message : err.message);
   }
-  const student_no = `${prefix}${nextSeq.toString().padStart(4, "0")}`;
-
-  // 2. 插入数据
-  const { data, error } = await supabase
-    .from("students")
-    .insert([{ ...formData, student_no }])
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-
-  revalidatePath("/students");
-  return data;
 }
 
 export async function updateStudent(id: string, formData: any) {
