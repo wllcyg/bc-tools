@@ -64,7 +64,7 @@ export function Sidebar() {
 
       <aside 
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen w-64 border-r bg-card transition-transform duration-300 dark:bg-zinc-950",
+          "fixed left-0 top-0 z-40 h-screen w-64 border-r bg-card transition-transform duration-300",
           !isOpen && "-translate-x-full lg:translate-x-0" // 在大屏始终显示（或根据后续需求也支持大屏折叠）
         )}
       >

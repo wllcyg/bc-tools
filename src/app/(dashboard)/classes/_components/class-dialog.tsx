@@ -42,15 +42,28 @@ const classSchema = z.object({
 type ClassFormValues = z.infer<typeof classSchema>;
 
 interface ClassDialogProps {
-  className?: any; // naming it 'cls' to avoid collision with 'className' prop if needed, but 'classObj' is safer
+  className?: any;
   classObj?: any;
   teachers: any[];
+  existingGrades?: string[];
   trigger?: React.ReactNode;
 }
 
-export function ClassDialog({ classObj, teachers, trigger }: ClassDialogProps) {
+export function ClassDialog({ classObj, teachers, existingGrades = [], trigger }: ClassDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // 标准年级列表
+  const standardGrades = ["一年级", "二年级", "三年级", "四年级", "五年级", "六年级", "初一", "初二", "初三", "高一", "高二", "高三"];
+  
+  // 合并标准年级和数据库中的年级，去重
+  const allGrades = Array.from(new Set([...standardGrades, ...existingGrades])).sort((a, b) => {
+    const getOrder = (g: string) => {
+      const idx = standardGrades.indexOf(g);
+      return idx === -1 ? 999 : idx;
+    };
+    return getOrder(a) - getOrder(b);
+  });
 
   const form = useForm<ClassFormValues>({
     resolver: zodResolver(classSchema),
@@ -127,9 +140,11 @@ export function ClassDialog({ classObj, teachers, trigger }: ClassDialogProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="初一">初一</SelectItem>
-                        <SelectItem value="初二">初二</SelectItem>
-                        <SelectItem value="初三">初三</SelectItem>
+                        {allGrades.map((g) => (
+                          <SelectItem key={g} value={g}>
+                            {g}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -58,3 +58,17 @@ export async function deleteClass(id: string) {
 
   revalidatePath("/classes");
 }
+
+export async function getUniqueGrades() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("classes")
+    .select("grade");
+
+  if (error) throw new Error(error.message);
+
+  // 获取去重后的年级列表并排序
+  const uniqueGrades = Array.from(new Set(data.map((item: any) => item.grade))).sort();
+  return uniqueGrades;
+}

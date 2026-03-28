@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+import { ThemeToggle } from "@/components/theme-toggle";
+
 export function Header() {
   const router = useRouter();
   const { profile, loading } = useProfile();
@@ -38,7 +40,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center border-b bg-background/80 px-4 backdrop-blur-md dark:bg-zinc-950/80">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center border-b bg-background/80 px-4 backdrop-blur-md">
       <div className="flex w-full items-center justify-between">
         <div className="flex items-center gap-4">
           <Button 
@@ -56,7 +58,8 @@ export function Header() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <ThemeToggle />
           <Button variant="ghost" size="icon" className="relative group">
             <Bell className="h-5 w-5 transition-transform group-hover:scale-110" />
             <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-destructive border-2 border-background" />

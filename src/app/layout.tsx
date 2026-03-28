@@ -18,6 +18,8 @@ export const metadata: Metadata = {
   description: "基于 Next.js 的现代化学生管理系统",
 };
 
+import { ThemeProvider } from "@/components/theme-provider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -29,8 +31,15 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full bg-zinc-50 font-sans text-zinc-950 antialiased dark:bg-black dark:text-zinc-50">
-        {children}
+      <body className="min-h-full bg-background font-sans text-foreground antialiased transition-colors duration-300">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
         <Toaster richColors position="top-center" />
       </body>
     </html>

@@ -13,7 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function ClassFilters() {
+interface ClassFiltersProps {
+  grades: string[];
+}
+
+export function ClassFilters({ grades }: ClassFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -44,8 +48,6 @@ export function ClassFilters() {
     setGrade("all");
     router.push(pathname);
   };
-
-  const grades = ["一年级", "二年级", "三年级", "四年级", "五年级", "六年级", "初一", "初二", "初三", "高一", "高二", "高三"];
 
   return (
     <div className="flex flex-wrap items-center gap-3">

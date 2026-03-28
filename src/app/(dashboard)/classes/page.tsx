@@ -14,16 +14,18 @@ import {
 import { ClassDialog } from "./_components/class-dialog";
 import { ClassFilters } from "./_components/class-filters";
 import { DeleteButton } from "@/components/common/delete-button";
-import { deleteClass } from "./actions";
+import { deleteClass, getUniqueGrades } from "./actions";
 
 async function ClassesList({ 
   teachers, 
   keyword, 
-  grade 
+  grade,
+  existingGrades
 }: { 
   teachers: { id: string, name: string, subject: string | null }[], 
   keyword?: string, 
-  grade?: string 
+  grade?: string,
+  existingGrades?: string[]
 }) {
   const supabase = await createClient();
   
@@ -94,6 +96,7 @@ async function ClassesList({
                   <ClassDialog
                     classObj={cls}
                     teachers={teachers}
+                    existingGrades={existingGrades}
                     trigger={<Button variant="ghost" size="sm" className="hover:text-primary">编辑</Button>}
                   />
                   <DeleteButton
@@ -128,6 +131,8 @@ export default async function ClassesPage(props: {
     .select("id, name, subject")
     .order("name");
 
+  const uniqueGrades = (await getUniqueGrades()) || [];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -135,13 +140,18 @@ export default async function ClassesPage(props: {
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">班级管理</h1>
           <p className="text-muted-foreground mt-1">创建和维护学校所有教学班级及班主任分配。</p>
         </div>
-        <ClassDialog teachers={teachers || []} />
+        <ClassDialog teachers={teachers || []} existingGrades={uniqueGrades} />
       </div>
 
-      <ClassFilters />
+      <ClassFilters grades={uniqueGrades} />
 
       <Suspense key={`${keyword}-${grade}`} fallback={<ClassesSkeleton />}>
-        <ClassesList teachers={teachers || []} keyword={keyword} grade={grade} />
+        <ClassesList 
+          teachers={teachers || []} 
+          keyword={keyword} 
+          grade={grade} 
+          existingGrades={uniqueGrades}
+        />
       </Suspense>
     </div>
   );
