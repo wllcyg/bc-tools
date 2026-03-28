@@ -167,6 +167,7 @@ export async function getStudentGrowthData(studentId: string, classId: string) {
   const { data: studentGrades, error: sError } = await supabase
     .from("grades")
     .select(`
+      id,
       score,
       exam_id,
       exams (name, exam_date, id),
@@ -176,10 +177,18 @@ export async function getStudentGrowthData(studentId: string, classId: string) {
     .eq("student_id", studentId);
 
   if (sError) throw new Error(sError.message);
-  if (!studentGrades || studentGrades.length === 0) return null;
+  
+  // 规范化返回数据（处理可能的数组嵌套）
+  const normalizedGrades = (studentGrades || []).map((g: any) => ({
+    ...g,
+    exams: Array.isArray(g.exams) ? g.exams[0] : g.exams,
+    courses: Array.isArray(g.courses) ? g.courses[0] : g.courses,
+  }));
+
+  if (normalizedGrades.length === 0) return null;
 
   // 2. 获取该学生参加的所有考试 ID
-  const examIds = Array.from(new Set(studentGrades.map((g: any) => g.exam_id).filter(Boolean)));
+  const examIds = Array.from(new Set(normalizedGrades.map((g: any) => g.exam_id).filter(Boolean)));
 
   // 3. 获取全班在这些考试中的所有成绩，用于计算均分
   const { data: classGrades, error: cError } = await supabase
@@ -216,7 +225,7 @@ export async function getStudentGrowthData(studentId: string, classId: string) {
   }, {});
 
   return {
-    studentGrades,
+    studentGrades: normalizedGrades,
     classAverages
   };
 }
