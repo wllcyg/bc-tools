@@ -12,6 +12,7 @@ import {
   BookMarked,
   FileText,
   BarChart,
+  LineChart,
   X,
   type LucideIcon
 } from "lucide-react";
@@ -36,6 +37,7 @@ const menuItems: MenuItem[] = [
   { icon: BookMarked, label: "课程管理", href: "/courses", roles: ["admin", "edu_admin"] },
   { icon: FileText, label: "考试管理", href: "/exams", roles: ["admin", "edu_admin"] },
   { icon: BarChart, label: "成绩管理", href: "/grades", roles: ["admin", "edu_admin", "teacher"] },
+  { icon: LineChart, label: "学情分析", href: "/analysis", roles: ["admin", "edu_admin", "teacher"] },
   { icon: BookOpen, label: "作业", href: "/homework-results", roles: ["admin", "edu_admin", "teacher"] },
   { icon: Settings, label: "系统设置", href: "/settings", roles: ["admin"] },
 ];

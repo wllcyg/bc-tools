@@ -39,6 +39,8 @@ const courseSchema = z.object({
   name: z.string().min(1, "课程名称不能为空"),
   teacher_id: z.string().optional().nullable(),
   max_score: z.number().min(1, "满分不能为空"),
+  pass_score: z.number().min(0, "及格分不能为负数"),
+  excellent_score: z.number().min(0, "优秀分不能为负数"),
   class_ids: z.array(z.string()),
 });
 
@@ -53,6 +55,8 @@ interface Course {
   name: string;
   teacher_id?: string | null;
   max_score: number;
+  pass_score: number;
+  excellent_score: number;
   course_classes?: CourseClass[];
 }
 
@@ -90,6 +94,8 @@ export function CourseDialog({
       name: courseObj?.name || "",
       teacher_id: courseObj?.teacher_id || "none",
       max_score: courseObj?.max_score ?? 100,
+      pass_score: courseObj?.pass_score ?? 60,
+      excellent_score: courseObj?.excellent_score ?? 90,
       class_ids: courseObj?.course_classes?.map((cc: CourseClass) => cc.class_id) || [],
     },
   });
@@ -188,25 +194,71 @@ export function CourseDialog({
                 )}
               />
 
-              {/* 满分 */}
-              <FormField
-                control={form.control}
-                name="max_score"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>满分</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="默认继承科目满分"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* 满分、及格分、优秀分并排展示 */}
+              <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="max_score"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>满分</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="100"
+                          {...field}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            field.onChange(val);
+                            // 自动建议：及格 60%，优秀 90%
+                            form.setValue("pass_score", val * 0.6);
+                            form.setValue("excellent_score", val * 0.9);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="pass_score"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>及格分</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="60"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="excellent_score"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>优秀分</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="90"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {/* 关联班级（多选 Checkbox） */}
               <FormField

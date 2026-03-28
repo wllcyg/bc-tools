@@ -87,7 +87,7 @@ async function CoursesList({
             <TableHead>课程名称</TableHead>
             <TableHead>课程编码</TableHead>
             <TableHead>任课教师</TableHead>
-            <TableHead>满分</TableHead>
+            <TableHead>分值标准</TableHead>
             <TableHead>开课班级</TableHead>
             <TableHead className="text-right">操作</TableHead>
           </TableRow>
@@ -112,12 +112,20 @@ async function CoursesList({
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant="outline"
-                    className="bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400"
-                  >
-                    {course.max_score} 分
-                  </Badge>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="text-muted-foreground w-8">满分:</span>
+                      <span className="font-bold text-amber-700 dark:text-amber-400">{course.max_score}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="text-muted-foreground w-8">及格:</span>
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400">{course.pass_score}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="text-muted-foreground w-8">优秀:</span>
+                      <span className="font-bold text-blue-700 dark:text-blue-400">{course.excellent_score}</span>
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {linkedClasses.length === 0 ? (

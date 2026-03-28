@@ -7,6 +7,8 @@ export async function createCourse(formData: {
   name: string;
   teacher_id?: string | null;
   max_score?: number;
+  pass_score?: number;
+  excellent_score?: number;
   class_ids?: string[];
 }) {
   const supabase = await createClient();
@@ -48,6 +50,8 @@ export async function updateCourse(
     name?: string;
     teacher_id?: string | null;
     max_score?: number;
+    pass_score?: number;
+    excellent_score?: number;
     class_ids?: string[];
   }
 ) {
